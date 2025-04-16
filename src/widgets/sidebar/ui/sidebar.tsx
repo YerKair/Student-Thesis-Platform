@@ -13,6 +13,7 @@ import {
   MenuSquare,
   ChevronLeft,
   ChevronRight,
+  X,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -26,13 +27,19 @@ interface NavItem {
   badgeColor?: string;
 }
 
+interface SidebarProps {
+  collapsed?: boolean;
+  onToggle?: (collapsed: boolean) => void;
+  isMobile?: boolean;
+  onClose?: () => void;
+}
+
 export function Sidebar({
   collapsed: propCollapsed,
   onToggle,
-}: {
-  collapsed?: boolean;
-  onToggle?: (collapsed: boolean) => void;
-}) {
+  isMobile = false,
+  onClose,
+}: SidebarProps) {
   const { user } = useAuthContext();
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(propCollapsed || false);
@@ -103,18 +110,43 @@ export function Sidebar({
     (item) => !item.roles || (user && item.roles.includes(user.role))
   );
 
-  return (
-    <aside
-      className={`fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white border-r border-gray-200 transition-all duration-300 z-20 ${
+  // В мобильном режиме сайдбар всегда развернут (не collapsed)
+  const sidebarClasses = isMobile
+    ? "fixed top-0 left-0 h-full w-64 bg-white z-50 shadow-xl"
+    : `fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white border-r border-gray-200 transition-all duration-300 z-20 ${
         collapsed ? "w-20" : "w-60"
-      }`}
-    >
-      <button
-        className="absolute top-4 right-2 p-0 h-6 w-6 flex items-center justify-center bg-transparent border-none cursor-pointer text-gray-600 hover:text-gray-900"
-        onClick={handleToggle}
-      >
-        {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-      </button>
+      }`;
+
+  return (
+    <aside className={sidebarClasses}>
+      {isMobile ? (
+        // Кнопка закрытия для мобильной версии
+        <button
+          className="absolute top-4 right-4 p-1 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200"
+          onClick={onClose}
+          aria-label="Закрыть меню"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      ) : (
+        // Кнопка сворачивания для десктопной версии
+        <button
+          className="absolute top-4 right-2 p-0 h-6 w-6 flex items-center justify-center bg-transparent border-none cursor-pointer text-gray-600 hover:text-gray-900"
+          onClick={handleToggle}
+          aria-label={collapsed ? "Развернуть меню" : "Свернуть меню"}
+        >
+          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+        </button>
+      )}
+
+      {isMobile && (
+        <div className="p-4 mb-4 flex items-center">
+          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+            <span className="text-white font-bold text-sm">ДП</span>
+          </div>
+          <span className="ml-2 font-semibold text-xl">Диплом.Платформа</span>
+        </div>
+      )}
 
       <div className="h-full overflow-y-auto p-3 pt-8">
         <div className="space-y-1">
@@ -127,6 +159,7 @@ export function Sidebar({
                   ? "bg-blue-50 text-blue-600 font-medium"
                   : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
               }`}
+              onClick={isMobile && onClose ? onClose : undefined}
             >
               <div className="flex items-center gap-3">
                 <span
@@ -138,12 +171,12 @@ export function Sidebar({
                 >
                   {item.icon}
                 </span>
-                {!collapsed && (
+                {(!collapsed || isMobile) && (
                   <span className="truncate text-sm">{item.title}</span>
                 )}
               </div>
 
-              {!collapsed && item.badge && (
+              {(!collapsed || isMobile) && item.badge && (
                 <span
                   className={`text-xs px-1.5 py-0.5 rounded-full text-white ${
                     item.badgeColor || "bg-blue-500"
@@ -157,7 +190,7 @@ export function Sidebar({
         </div>
       </div>
 
-      {!collapsed && (
+      {(!collapsed || isMobile) && (
         <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200">
           <div className="bg-blue-50 rounded-md p-3 flex flex-col items-center text-center">
             <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mb-2">

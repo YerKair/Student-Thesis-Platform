@@ -13,9 +13,14 @@ import { Label } from "@/shared/ui/label";
 import { useToast } from "@/shared/ui/use-toast";
 import { Switch } from "@/shared/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
+import { useState } from "react";
+import { Bell, Shield, Palette, Moon, Sun } from "lucide-react";
+import { useTheme } from "@/app/providers/theme-provider";
 
 export default function SettingsPage() {
   const { toast } = useToast();
+  const { theme, toggleTheme } = useTheme();
+  const [activeTab, setActiveTab] = useState("account");
 
   const handleSaveSettings = () => {
     toast({
@@ -24,216 +29,255 @@ export default function SettingsPage() {
     });
   };
 
+  // Настройки безопасности
+  const securitySettings = [
+    {
+      id: "two-factor",
+      label: "Двухфакторная аутентификация",
+      description: "Повысьте безопасность вашего аккаунта с помощью 2FA",
+      defaultChecked: false,
+    },
+    {
+      id: "activity-log",
+      label: "Журнал активности",
+      description: "Сохранять историю ваших действий в системе",
+      defaultChecked: true,
+    },
+    {
+      id: "public-profile",
+      label: "Публичный профиль",
+      description: "Ваш профиль будет виден другим пользователям",
+      defaultChecked: false,
+    },
+  ];
+
+  // Настройки уведомлений
+  const notificationSettings = [
+    {
+      id: "email-notifications",
+      label: "Email уведомления",
+      description: "Получать уведомления на почту",
+      defaultChecked: true,
+    },
+    {
+      id: "browser-notifications",
+      label: "Браузерные уведомления",
+      description: "Показывать уведомления в браузере",
+      defaultChecked: false,
+    },
+    {
+      id: "team-notifications",
+      label: "Уведомления о командах",
+      description: "Уведомления об изменениях в командах",
+      defaultChecked: true,
+    },
+    {
+      id: "contract-notifications",
+      label: "Уведомления о договорах",
+      description: "Уведомления о статусе договоров",
+      defaultChecked: true,
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Настройки</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+          Настройки
+        </h1>
+        <p className="text-sm md:text-base text-gray-600">
           Управление настройками вашей учетной записи
         </p>
       </div>
 
-      <Tabs defaultValue="account" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="account">Аккаунт</TabsTrigger>
-          <TabsTrigger value="notifications">Уведомления</TabsTrigger>
-          <TabsTrigger value="appearance">Внешний вид</TabsTrigger>
-        </TabsList>
+      <div className="w-full overflow-hidden">
+        <Tabs
+          defaultValue="account"
+          className="w-full"
+          value={activeTab}
+          onValueChange={setActiveTab}
+        >
+          <div className="overflow-x-auto pb-2">
+            <TabsList className="w-full sm:w-auto">
+              <TabsTrigger value="account" className="flex-1 sm:flex-none">
+                <Shield className="h-4 w-4 mr-2 hidden sm:inline-block" />
+                Аккаунт
+              </TabsTrigger>
+              <TabsTrigger
+                value="notifications"
+                className="flex-1 sm:flex-none"
+              >
+                <Bell className="h-4 w-4 mr-2 hidden sm:inline-block" />
+                Уведомления
+              </TabsTrigger>
+              <TabsTrigger value="appearance" className="flex-1 sm:flex-none">
+                <Palette className="h-4 w-4 mr-2 hidden sm:inline-block" />
+                Внешний вид
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-        <TabsContent value="account" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Настройки аккаунта</CardTitle>
-              <CardDescription>
-                Управление основными настройками вашего аккаунта
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="two-factor">
-                      Двухфакторная аутентификация
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Повысьте безопасность вашего аккаунта с помощью 2FA
-                    </p>
-                  </div>
-                  <Switch id="two-factor" />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="activity-log">Журнал активности</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Сохранять историю ваших действий в системе
-                    </p>
-                  </div>
-                  <Switch id="activity-log" defaultChecked />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="public-profile">Публичный профиль</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Ваш профиль будет виден другим пользователям
-                    </p>
-                  </div>
-                  <Switch id="public-profile" />
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button onClick={handleSaveSettings}>Сохранить настройки</Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="notifications" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Настройки уведомлений</CardTitle>
-              <CardDescription>
-                Настройка способов и типов уведомлений
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="email-notifications">
-                      Email уведомления
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Получать уведомления на почту
-                    </p>
-                  </div>
-                  <Switch id="email-notifications" defaultChecked />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="browser-notifications">
-                      Браузерные уведомления
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Показывать уведомления в браузере
-                    </p>
-                  </div>
-                  <Switch id="browser-notifications" />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="team-notifications">
-                      Уведомления о командах
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Уведомления об изменениях в командах
-                    </p>
-                  </div>
-                  <Switch id="team-notifications" defaultChecked />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="contract-notifications">
-                      Уведомления о договорах
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Уведомления о статусе договоров
-                    </p>
-                  </div>
-                  <Switch id="contract-notifications" defaultChecked />
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button onClick={handleSaveSettings}>Сохранить настройки</Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="appearance" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Внешний вид</CardTitle>
-              <CardDescription>Настройка внешнего вида системы</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Тема</Label>
-                <div className="grid grid-cols-3 gap-4">
-                  <Button
-                    variant="outline"
-                    className="border-2 border-primary p-0 h-16 justify-center"
+          <TabsContent value="account" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Настройки аккаунта</CardTitle>
+                <CardDescription>
+                  Управление основными настройками вашего аккаунта
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {securitySettings.map((setting) => (
+                  <div
+                    key={setting.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0 py-3 border-b border-gray-100 last:border-0"
                   >
-                    <div className="flex flex-col items-center space-y-1">
-                      <div className="w-full h-8 bg-background"></div>
-                      <span className="text-xs">Светлая</span>
+                    <div className="space-y-0.5">
+                      <Label
+                        htmlFor={setting.id}
+                        className="text-base font-medium"
+                      >
+                        {setting.label}
+                      </Label>
+                      <p className="text-sm text-gray-500">
+                        {setting.description}
+                      </p>
                     </div>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="border-2 p-0 h-16 justify-center"
-                  >
-                    <div className="flex flex-col items-center space-y-1">
-                      <div className="w-full h-8 bg-black"></div>
-                      <span className="text-xs">Темная</span>
-                    </div>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="border-2 p-0 h-16 justify-center"
-                  >
-                    <div className="flex flex-col items-center space-y-1">
-                      <div className="w-full h-8 bg-gradient-to-r from-white to-black"></div>
-                      <span className="text-xs">Системная</span>
-                    </div>
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="animations">Анимации</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Включить анимации интерфейса
-                    </p>
+                    <Switch
+                      id={setting.id}
+                      defaultChecked={setting.defaultChecked}
+                    />
                   </div>
-                  <Switch id="animations" defaultChecked />
-                </div>
-              </div>
+                ))}
+              </CardContent>
+              <CardFooter>
+                <Button
+                  onClick={handleSaveSettings}
+                  className="w-full sm:w-auto"
+                >
+                  Сохранить настройки
+                </Button>
+              </CardFooter>
+            </Card>
+          </TabsContent>
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="compact-mode">Компактный режим</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Уменьшить размер элементов интерфейса
-                    </p>
+          <TabsContent value="notifications" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Настройки уведомлений</CardTitle>
+                <CardDescription>
+                  Настройка способов и типов уведомлений
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {notificationSettings.map((setting) => (
+                  <div
+                    key={setting.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0 py-3 border-b border-gray-100 last:border-0"
+                  >
+                    <div className="space-y-0.5">
+                      <Label
+                        htmlFor={setting.id}
+                        className="text-base font-medium"
+                      >
+                        {setting.label}
+                      </Label>
+                      <p className="text-sm text-gray-500">
+                        {setting.description}
+                      </p>
+                    </div>
+                    <Switch
+                      id={setting.id}
+                      defaultChecked={setting.defaultChecked}
+                    />
                   </div>
-                  <Switch id="compact-mode" />
+                ))}
+              </CardContent>
+              <CardFooter>
+                <Button
+                  onClick={handleSaveSettings}
+                  className="w-full sm:w-auto"
+                >
+                  Сохранить настройки
+                </Button>
+              </CardFooter>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="appearance" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Внешний вид</CardTitle>
+                <CardDescription>
+                  Настройка внешнего вида системы
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label className="text-base font-medium">Тема</Label>
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <Button
+                      variant={theme === "light" ? "default" : "outline"}
+                      className="flex-1 py-6 flex flex-col items-center gap-2"
+                      onClick={() => theme === "dark" && toggleTheme()}
+                    >
+                      <Sun className="h-6 w-6" />
+                      <span>Светлая</span>
+                    </Button>
+                    <Button
+                      variant={theme === "dark" ? "default" : "outline"}
+                      className="flex-1 py-6 flex flex-col items-center gap-2"
+                      onClick={() => theme === "light" && toggleTheme()}
+                    >
+                      <Moon className="h-6 w-6" />
+                      <span>Темная</span>
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button onClick={handleSaveSettings}>Сохранить настройки</Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-      </Tabs>
+
+                <div className="space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0 py-3 border-b border-gray-100">
+                    <div className="space-y-0.5">
+                      <Label
+                        htmlFor="animations"
+                        className="text-base font-medium"
+                      >
+                        Анимации
+                      </Label>
+                      <p className="text-sm text-gray-500">
+                        Включить анимации интерфейса
+                      </p>
+                    </div>
+                    <Switch id="animations" defaultChecked />
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0 py-3 border-b border-gray-100">
+                    <div className="space-y-0.5">
+                      <Label
+                        htmlFor="compact-mode"
+                        className="text-base font-medium"
+                      >
+                        Компактный режим
+                      </Label>
+                      <p className="text-sm text-gray-500">
+                        Уменьшить размер элементов интерфейса
+                      </p>
+                    </div>
+                    <Switch id="compact-mode" />
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button
+                  onClick={handleSaveSettings}
+                  className="w-full sm:w-auto"
+                >
+                  Сохранить настройки
+                </Button>
+              </CardFooter>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }
