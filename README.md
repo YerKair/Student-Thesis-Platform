@@ -34,3 +34,30 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Настройка AI-чата с Google Gemini API
+
+Проект использует Google Gemini API для чат-бота помощника по дипломной работе. Для настройки:
+
+1. Получите API ключ на [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Создайте файл `.env.local` в корне проекта
+3. Добавьте ваш API ключ:
+
+```
+NEXT_PUBLIC_GEMINI_API_KEY=ваш_api_ключ
+```
+
+Лимиты бесплатного использования Gemini API:
+
+- До 60 запросов в минуту
+- Неограниченное количество запросов в день
+- Полная поддержка русского языка
+
+### Функциональность AI-чата
+
+AI-чат предоставляет студентам помощь по вопросам дипломной работы:
+
+- Оформление и требования
+- Сроки подготовки и сдачи
+- Рекомендации по структуре
+- Советы по работе с научным руководителем

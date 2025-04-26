@@ -8,58 +8,142 @@ import {
   RegisterCredentials,
   AuthState,
 } from "../model/types";
-import { LoginFormValues, RegisterFormValues } from "@/features/auth/model";
 
-// Имитация сервиса аутентификации - в реальном проекте здесь будет API
+// Базовый URL API
+const API_BASE_URL = "http://localhost:8000";
+
+// API сервис аутентификации
 class AuthService {
   static async login(
     credentials: LoginCredentials
-  ): Promise<{ user: User; token: string }> {
-    // Имитация задержки сети
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+  ): Promise<{ user: User; token: string; refreshToken: string }> {
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(credentials),
+    });
 
-    // Проверка учетных данных (здесь мы просто эмулируем успешный вход)
-    const user: User = {
-      id: "1",
-      name: "Тестовый Пользователь",
-      email: credentials.email,
-      role: "student",
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Ошибка при входе");
+    }
+
+    const data = await response.json();
+
+    // Получаем данные пользователя
+    const userProfile = await AuthService.getUserProfile(data.access_token);
+
+    // Сохраняем токены в localStorage
+    localStorage.setItem("authToken", data.access_token);
+    localStorage.setItem("refreshToken", data.refresh_token);
+    localStorage.setItem("user", JSON.stringify(userProfile));
+
+    return {
+      user: userProfile,
+      token: data.access_token,
+      refreshToken: data.refresh_token,
     };
-
-    const token = "fake-jwt-token";
-
-    // Сохраняем в localStorage (в реальном приложении можно использовать httpOnly cookies)
-    localStorage.setItem("authToken", token);
-    localStorage.setItem("user", JSON.stringify(user));
-
-    return { user, token };
   }
 
   static async register(
     credentials: RegisterCredentials
-  ): Promise<{ user: User; token: string }> {
-    // Имитация задержки сети
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    // Создание пользователя (здесь мы просто эмулируем успешную регистрацию)
-    const user: User = {
-      id: "1",
-      name: credentials.name,
+  ): Promise<{ user: User; token: string; refreshToken: string }> {
+    // Подготовка данных для API
+    const registerData = {
       email: credentials.email,
-      role: "student",
+      password: credentials.password,
+      full_name: credentials.name,
     };
 
-    const token = "fake-jwt-token";
+    // Регистрация пользователя
+    const registerResponse = await fetch(
+      `${API_BASE_URL}/api/v1/users/register`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(registerData),
+      }
+    );
 
-    // Сохраняем в localStorage
-    localStorage.setItem("authToken", token);
+    if (!registerResponse.ok) {
+      const errorData = await registerResponse.json();
+      throw new Error(errorData.detail || "Ошибка при регистрации");
+    }
+
+    const registeredUser = await registerResponse.json();
+
+    // Авторизация пользователя после регистрации
+    const loginData = {
+      email: credentials.email,
+      password: credentials.password,
+    };
+
+    const loginResponse = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(loginData),
+    });
+
+    if (!loginResponse.ok) {
+      throw new Error("Регистрация успешна, но не удалось выполнить вход");
+    }
+
+    const tokenData = await loginResponse.json();
+
+    // Подготавливаем данные пользователя в нужном формате
+    const user: User = {
+      id: registeredUser.id.toString(),
+      name: registeredUser.full_name,
+      email: registeredUser.email,
+      role: registeredUser.role,
+    };
+
+    // Сохраняем токены и данные пользователя
+    localStorage.setItem("authToken", tokenData.access_token);
+    localStorage.setItem("refreshToken", tokenData.refresh_token);
     localStorage.setItem("user", JSON.stringify(user));
 
-    return { user, token };
+    return {
+      user,
+      token: tokenData.access_token,
+      refreshToken: tokenData.refresh_token,
+    };
+  }
+
+  static async getUserProfile(token: string): Promise<User> {
+    const response = await fetch(`${API_BASE_URL}/api/v1/users/me`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Не удалось получить профиль пользователя");
+    }
+
+    const userData = await response.json();
+
+    // Преобразуем ответ API в формат User
+    const user: User = {
+      id: userData.id.toString(),
+      name: userData.full_name,
+      email: userData.email,
+      role: userData.role,
+      isActive: userData.is_active,
+      createdAt: userData.created_at,
+    };
+    return user;
   }
 
   static logout(): void {
     localStorage.removeItem("authToken");
+    localStorage.removeItem("refreshToken");
     localStorage.removeItem("user");
   }
 
@@ -77,6 +161,10 @@ class AuthService {
       console.error("Failed to parse user data", e);
       return null;
     }
+  }
+
+  static getToken(): string | null {
+    return localStorage.getItem("authToken");
   }
 }
 

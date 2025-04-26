@@ -47,7 +47,7 @@ export default function ContractsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 m-15">
       <div>
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
           Договоры

@@ -3,95 +3,205 @@
 export function ThemeStyles() {
   return (
     <style jsx global>{`
-      /* Стили для светлой темы (по умолчанию) */
+      /* Предотвращение мигания темы */
+      html {
+        visibility: visible;
+        transition: background-color 0.2s ease;
+      }
+
+      /* Стили для светлой темы (по умолчанию) - БЕЛАЯ */
       :root {
         --background: #ffffff;
         --foreground: #171717;
+        --primary: #2563eb;
+        --primary-light: #60a5fa;
+        --border-color: #e5e7eb;
+        --card-bg: #ffffff;
+        --hover-bg: #f9fafb;
+        --text-primary: #171717;
+        --text-secondary: #4b5563;
+        --text-tertiary: #6b7280;
       }
 
-      /* Стили для темной темы */
+      html.light,
+      body.light,
+      [data-theme="light"] {
+        background-color: #ffffff !important;
+        color: #171717 !important;
+      }
+
+      html.light header,
+      body.light header,
+      [data-theme="light"] header,
+      body:not([data-theme="dark"]) header,
+      html:not([data-theme="dark"]) header {
+        background-color: #ffffff !important;
+        border-color: #e5e7eb !important;
+      }
+
+      /* Переопределение для хедера в светлой теме */
+      body:not([data-theme="dark"]) header {
+        background-color: #ffffff !important;
+      }
+
+      /* Светлая тема - основные элементы */
+      body:not([data-theme="dark"]) {
+        background-color: #ffffff;
+      }
+
+      body:not([data-theme="dark"]) main,
+      html.light main {
+        background-color: #ffffff !important;
+      }
+
+      body:not([data-theme="dark"]) aside,
+      html.light aside {
+        background-color: #ffffff !important;
+      }
+
+      body:not([data-theme="dark"]) .card,
+      body:not([data-theme="dark"]) [class*="Card"],
+      body:not([data-theme="dark"]) .bg-white,
+      html.light .card,
+      html.light [class*="Card"],
+      html.light .bg-white {
+        background-color: #ffffff !important;
+      }
+
+      body:not([data-theme="dark"]) .border,
+      html.light .border {
+        border-color: #e5e7eb !important;
+      }
+
+      /* ТЕМНО-СИНЯЯ ТЕМА */
       [data-theme="dark"] {
-        --background: #0a0a0a;
-        --foreground: #ededed;
+        --background: #0a1929;
+        --foreground: #ffffff;
+        --primary: #4d84ff;
+        --primary-dark: #1a56db;
+        --primary-light: #93c5fd;
+        --border-color: #193354;
+        --card-bg: #102a43;
+        --hover-bg: #193354;
+        --text-primary: #ffffff;
+        --text-secondary: #a3c0e6;
+        --text-tertiary: #748fb8;
+        color-scheme: dark;
       }
 
-      /* Дополнительные стили для темной темы */
+      /* Фоны и контейнеры для темной темы */
+      [data-theme="dark"] {
+        background-color: #0a1929 !important;
+        color: #ffffff !important;
+      }
+
       [data-theme="dark"] .bg-white,
       [data-theme="dark"] header,
-      [data-theme="dark"] aside {
-        background-color: #0a0a0a !important;
+      [data-theme="dark"] aside,
+      [data-theme="dark"] .bg-gradient-to-b {
+        background-color: #102a43 !important;
       }
 
-      [data-theme="dark"] .border-gray-200,
+      [data-theme="dark"] .border,
       [data-theme="dark"] header,
-      [data-theme="dark"] aside {
-        border-color: #333 !important;
+      [data-theme="dark"] aside,
+      [data-theme="dark"] .border-blue-100 {
+        border-color: #193354 !important;
       }
 
-      [data-theme="dark"] .text-gray-600,
-      [data-theme="dark"] .text-gray-700,
-      [data-theme="dark"] .text-gray-800,
-      [data-theme="dark"] .text-gray-900,
+      /* Улучшенные текстовые стили для темной темы */
       [data-theme="dark"] aside button,
-      [data-theme="dark"] p.text-sm.font-medium.text-gray-900 {
-        color: #e0e0e0 !important;
+      [data-theme="dark"] p.text-sm.font-medium,
+      [data-theme="dark"] .text-base.font-medium,
+      [data-theme="dark"] .text-black,
+      [data-theme="dark"] aside a,
+      [data-theme="dark"] aside span,
+      [data-theme="dark"] .text-sm,
+      [data-theme="dark"] .text-xs {
+        color: #a3c0e6 !important;
       }
 
-      [data-theme="dark"] .text-gray-400,
-      [data-theme="dark"] .text-gray-500,
-      [data-theme="dark"] aside a.text-gray-500,
-      [data-theme="dark"] aside span.text-gray-500 {
-        color: #a0a0a0 !important;
+      /* Делаем основной текст белым */
+      [data-theme="dark"] .font-medium,
+      [data-theme="dark"] .font-bold,
+      [data-theme="dark"] h1,
+      [data-theme="dark"] h2,
+      [data-theme="dark"] h3,
+      [data-theme="dark"] h4,
+      [data-theme="dark"] p {
+        color: #ffffff !important;
       }
 
-      [data-theme="dark"] .bg-gray-100,
-      [data-theme="dark"] aside a:hover:not(.bg-blue-50) {
-        background-color: #222 !important;
+      /* Карточки и фоны с улучшенными эффектами для темной темы */
+      [data-theme="dark"] aside a:hover:not(.bg-blue-50),
+      [data-theme="dark"] .hover\\:bg-white:hover,
+      [data-theme="dark"] .data-\\[state\\="active\\"]:bg-white {
+        background-color: #193354 !important;
       }
 
-      [data-theme="dark"] .hover\:text-gray-900:hover,
-      [data-theme="dark"] aside a:hover .text-gray-500 {
-        color: #e0e0e0 !important;
+      /* Исправления для диалоговых окон */
+      [data-theme="dark"] .DialogContent,
+      [data-theme="dark"] [class*="DialogContent"],
+      [data-theme="dark"] div[role="dialog"] {
+        background-color: #102a43 !important;
+        border-color: #193354 !important;
       }
 
-      [data-theme="dark"] .bg-blue-50,
-      [data-theme="dark"] aside a.bg-blue-50,
-      [data-theme="dark"] aside .bg-blue-50 {
-        background-color: rgba(59, 130, 246, 0.15) !important;
+      /* Исправления для TabsList и TabsTrigger */
+      [data-theme="dark"] [role="tabslist"] {
+        background-color: #102a43 !important;
       }
 
-      [data-theme="dark"] .bg-blue-100,
-      [data-theme="dark"] aside .bg-blue-100,
-      [data-theme="dark"] aside span.bg-blue-100 {
-        background-color: rgba(59, 130, 246, 0.25) !important;
+      [data-theme="dark"] [role="tab"][data-state="active"] {
+        background-color: #193354 !important;
+        color: #ffffff !important;
       }
 
-      [data-theme="dark"] .text-blue-600,
-      [data-theme="dark"] aside .text-blue-600 {
-        color: #60a5fa !important;
+      /* Исправления для ввода */
+      [data-theme="dark"] input,
+      [data-theme="dark"] select,
+      [data-theme="dark"] textarea {
+        background-color: #0a1929 !important;
+        color: #ffffff !important;
+        border-color: #193354 !important;
       }
 
-      /* Улучшение контраста для кнопок в темной теме */
-      [data-theme="dark"] button:hover {
-        opacity: 0.9;
+      /* Исправления для бейджей */
+      [data-theme="dark"] .badge {
+        background-color: #193354 !important;
       }
 
-      /* Плавный переход для анимации смены темы */
+      /* Исправление наведения */
+      [data-theme="dark"] *:hover {
+        background-color: #234978 !important;
+      }
+
+      /* Фон модального окна */
+      [data-theme="dark"] .fixed.inset-0.z-50 {
+        background-color: rgba(10, 25, 41, 0.7) !important;
+      }
+
+      /* Плавные переходы для всех элементов */
+      * {
+        transition-property: background-color, border-color, color, fill, stroke,
+          opacity, box-shadow, transform;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        transition-duration: 150ms;
+      }
+
+      /* Специальные элементы с более длительной анимацией */
       body,
       .bg-white,
-      .bg-gray-100,
-      .bg-blue-50,
-      .bg-blue-100,
-      .text-gray-400,
-      .text-gray-500,
-      .text-gray-600,
-      .text-gray-700,
-      .text-gray-800,
-      .text-gray-900,
-      .text-blue-600,
-      .border-gray-200,
+      .text-black,
+      .border,
       header,
-      aside {
+      aside,
+      input,
+      select,
+      textarea,
+      .bg-gradient-to-b,
+      .shadow-sm,
+      .shadow-lg {
         transition: all 0.3s ease;
       }
     `}</style>

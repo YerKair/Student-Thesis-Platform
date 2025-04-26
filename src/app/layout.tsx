@@ -1,52 +1,61 @@
-import type { Metadata } from "next";
+import "@/app/globals.css";
 import { Inter } from "next/font/google";
-import "./globals.css";
-import { Providers } from "./providers";
-import { Toaster } from "@/shared/ui/toaster";
-import { ThemeStyles } from "./theme-styles";
+import { ThemeInitScript } from "@/app/theme-init-script";
+import { ThemeProvider } from "@/app/providers/theme-provider";
+import { ThemeStyles } from "@/app/theme-styles";
+import { AuthProvider } from "@/app/providers/auth-provider";
+import { ThemeScript } from "@/app/theme-script";
+import { MobileScreenWarning } from "@/shared/ui/feedback/MobileScreenWarning";
 
-const inter = Inter({ subsets: ["latin", "cyrillic"] });
+const inter = Inter({
+  subsets: ["latin", "cyrillic"],
+  variable: "--font-inter",
+});
 
-export const metadata: Metadata = {
-  title: "Платформа для дипломных работ",
-  description:
-    "Система для цифрового сопровождения студентов при выполнении дипломных работ",
+export const metadata = {
+  title: "Student Thesis Platform",
+  description: "Platform for managing student theses",
+  viewport: "width=device-width, initial-scale=1, viewport-fit=cover",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
-  // Скрипт для предотвращения мигания темы при загрузке страницы
-  const themeInitScript = `
-    (function() {
-      try {
-        const theme = localStorage.getItem('app-theme');
-        const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
-        
-        if (theme === 'dark' || (!theme && !prefersLight)) {
-          document.documentElement.setAttribute('data-theme', 'dark');
-        } else {
-          document.documentElement.setAttribute('data-theme', 'light');
-        }
-      } catch (e) {
-        console.error('Error applying theme:', e);
-      }
-    })()
-  `;
-
+}) {
   return (
-    <html lang="ru">
+    <html lang="en" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1.0, user-scalable=no"
+        />
+        <meta
+          name="theme-color"
+          content="#ffffff"
+          media="(prefers-color-scheme: light)"
+        />
+        <meta
+          name="theme-color"
+          content="#0a0a0a"
+          media="(prefers-color-scheme: dark)"
+        />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <ThemeInitScript />
         <ThemeStyles />
       </head>
-      <body className={inter.className}>
-        <Providers>
-          {children}
-          <Toaster />
-        </Providers>
+      <body
+        className={`${inter.variable} font-sans bg-background text-foreground antialiased selection:bg-primary/10 mobile-container dark:bg-[#121212]`}
+        suppressHydrationWarning
+      >
+        <AuthProvider>
+          <ThemeProvider>
+            <ThemeScript />
+            <MobileScreenWarning persistent={false} maxWidth={480} />
+            {children}
+          </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   );

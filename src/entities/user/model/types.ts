@@ -1,8 +1,8 @@
-export type UserRole = "student" | "teacher" | "admin";
-
 export interface User {
   id: string;
-  email: string;
   name: string;
-  role: UserRole;
+  email: string;
+  role: "student" | "teacher" | "supervisor" | "admin";
+  isActive?: boolean;
+  createdAt?: string;
 }
