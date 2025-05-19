@@ -26,6 +26,7 @@ export function RegisterForm() {
   const { toast } = useToast();
   const { register, isLoading } = useAuthContext();
   const [showPassword, setShowPassword] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -38,19 +39,33 @@ export function RegisterForm() {
   });
 
   async function onSubmit(data: RegisterFormValues) {
-    const result = await register(data);
+    setServerError(null);
 
-    if (result.success) {
-      toast({
-        title: "Регистрация выполнена успешно",
-        description: "Вы перенаправлены в личный кабинет",
-      });
-      router.push("/dashboard");
-    } else {
+    try {
+      const result = await register(data);
+
+      if (result.user) {
+        toast({
+          title: "Регистрация выполнена успешно",
+          description: "Вы будете перенаправлены в личный кабинет",
+        });
+
+        // Задержка перед перенаправлением, чтобы пользователь увидел сообщение
+        setTimeout(() => {
+          router.push("/dashboard");
+        }, 1500);
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Произошла ошибка при регистрации";
+
+      setServerError(errorMessage);
       toast({
         variant: "destructive",
         title: "Ошибка регистрации",
-        description: result.error || "Проверьте введенные данные",
+        description: errorMessage,
       });
     }
   }

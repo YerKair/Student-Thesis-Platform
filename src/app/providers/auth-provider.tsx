@@ -7,14 +7,15 @@ import {
   LoginFormValues,
   RegisterFormValues,
 } from "@/features/auth/model/schema";
+import { User } from "@/entities/user/model/types";
 
 interface AuthContextType extends AuthState {
   login: (
     data: LoginFormValues
-  ) => Promise<{ success: boolean; error?: string }>;
+  ) => Promise<{ user: User; token: string; refreshToken: string }>;
   register: (
     data: RegisterFormValues
-  ) => Promise<{ success: boolean; error?: string }>;
+  ) => Promise<{ user: User; token: string; refreshToken: string }>;
   logout: () => void;
 }
 

@@ -89,7 +89,7 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 m-15">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">
           Управление пользователями

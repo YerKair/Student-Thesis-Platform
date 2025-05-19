@@ -1,0 +1,90 @@
+.
+├── app
+│   ├── auth
+│   │   ├── layout.tsx
+│   │   ├── login
+│   │   │   └── page.tsx
+│   │   └── register
+│   │       └── page.tsx
+│   ├── dashboard
+│   │   ├── contracts
+│   │   │   └── page.tsx
+│   │   ├── layout.tsx
+│   │   ├── page.tsx
+│   │   ├── profile
+│   │   │   └── page.tsx
+│   │   ├── settings
+│   │   │   └── page.tsx
+│   │   ├── teams
+│   │   │   └── page.tsx
+│   │   └── users
+│   │       └── page.tsx
+│   ├── favicon.ico
+│   ├── globals.css
+│   ├── layout.tsx
+│   ├── page.tsx
+│   ├── providers
+│   │   ├── auth-provider.tsx
+│   │   ├── index.tsx
+│   │   └── theme-provider.tsx
+│   ├── theme-init-script.tsx
+│   ├── theme-script.tsx
+│   └── theme-styles.tsx
+├── entities
+│   └── user
+│       ├── index.ts
+│       └── model
+│           ├── index.ts
+│           └── types.ts
+├── features
+│   └── auth
+│       ├── index.ts
+│       ├── lib
+│       │   ├── index.ts
+│       │   └── use-auth.ts
+│       ├── model
+│       │   ├── index.ts
+│       │   ├── schema.ts
+│       │   └── types.ts
+│       └── ui
+│           ├── index.ts
+│           ├── login-form.tsx
+│           ├── logout-button.tsx
+│           ├── protected-route.tsx
+│           └── register-form.tsx
+├── shared
+│   ├── lib
+│   │   └── utils.ts
+│   └── ui
+│       ├── badge.tsx
+│       ├── button.tsx
+│       ├── card.tsx
+│       ├── dropdown-menu.tsx
+│       ├── form.tsx
+│       ├── input.tsx
+│       ├── label.tsx
+│       ├── progress.tsx
+│       ├── scroll-area.tsx
+│       ├── switch.tsx
+│       ├── table.tsx
+│       ├── tabs.tsx
+│       ├── theme-toggle.tsx
+│       ├── toast.tsx
+│       ├── toaster.tsx
+│       └── use-toast.ts
+├── structure.txt
+├── types
+│   └── declarations.d.ts
+└── widgets
+    ├── header
+    │   ├── index.ts
+    │   └── ui
+    │       ├── header.tsx
+    │       └── index.ts
+    └── sidebar
+        ├── index.ts
+        └── ui
+            ├── index.ts
+            └── sidebar.tsx
+
+29 directories, 59 files

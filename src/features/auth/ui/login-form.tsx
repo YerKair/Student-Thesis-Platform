@@ -26,6 +26,7 @@ export function LoginForm() {
   const { toast } = useToast();
   const { login, isLoading } = useAuthContext();
   const [showPassword, setShowPassword] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -36,19 +37,31 @@ export function LoginForm() {
   });
 
   async function onSubmit(data: LoginFormValues) {
-    const result = await login(data);
+    setServerError(null);
 
-    if (result.success) {
-      toast({
-        title: "Вход выполнен успешно",
-        description: "Вы перенаправлены в личный кабинет",
-      });
-      router.push("/dashboard");
-    } else {
+    try {
+      const result = await login(data);
+
+      if (result.user) {
+        toast({
+          title: "Вход выполнен успешно",
+          description: "Вы будете перенаправлены в личный кабинет",
+        });
+
+        // Задержка перед перенаправлением
+        setTimeout(() => {
+          router.push("/dashboard");
+        }, 1500);
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Произошла ошибка при входе";
+
+      setServerError(errorMessage);
       toast({
         variant: "destructive",
         title: "Ошибка входа",
-        description: result.error || "Проверьте введенные данные",
+        description: errorMessage,
       });
     }
   }

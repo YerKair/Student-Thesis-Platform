@@ -10,12 +10,15 @@ import {
   Settings,
   BookOpen,
   GraduationCap,
-  MenuSquare,
+  HelpCircle,
   ChevronLeft,
   ChevronRight,
+  X,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
+import { cn } from "@/shared/lib/utils";
+import { AIChat } from "@/features/ai-chat";
 
 interface NavItem {
   title: string;
@@ -26,16 +29,23 @@ interface NavItem {
   badgeColor?: string;
 }
 
+interface SidebarProps {
+  collapsed?: boolean;
+  onToggle?: (collapsed: boolean) => void;
+  isMobile?: boolean;
+  onClose?: () => void;
+}
+
 export function Sidebar({
   collapsed: propCollapsed,
   onToggle,
-}: {
-  collapsed?: boolean;
-  onToggle?: (collapsed: boolean) => void;
-}) {
+  isMobile = false,
+  onClose,
+}: SidebarProps) {
   const { user } = useAuthContext();
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(propCollapsed || false);
+  const [showAIChat, setShowAIChat] = useState(false);
 
   // Синхронизируем внутреннее состояние с пропсами
   useEffect(() => {
@@ -67,6 +77,13 @@ export function Sidebar({
     {
       title: "Команды",
       href: "/dashboard/teams",
+      icon: <Users className="h-5 w-5" />,
+      badge: "Новое",
+      badgeColor: "bg-green-500",
+    },
+    {
+      title: "Супервайзер",
+      href: "/supervisor",
       icon: <Users className="h-5 w-5" />,
     },
     {
@@ -103,76 +120,134 @@ export function Sidebar({
     (item) => !item.roles || (user && item.roles.includes(user.role))
   );
 
+  // В мобильном режиме сайдбар всегда развернут (не collapsed)
+  const sidebarClasses = isMobile
+    ? "fixed top-0 left-0 h-full w-72 bg-white dark:bg-[#141414] z-50 shadow-xl border-r border-gray-200 dark:border-gray-800"
+    : cn(
+        "fixed left-0 top-0 h-full bg-white dark:bg-[#141414] border-r border-gray-200 dark:border-gray-800 transition-all duration-300 z-20",
+        collapsed ? "w-20" : "w-64"
+      );
+
   return (
-    <aside
-      className={`fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white border-r border-gray-200 transition-all duration-300 z-20 ${
-        collapsed ? "w-20" : "w-60"
-      }`}
-    >
-      <button
-        className="absolute top-4 right-2 p-0 h-6 w-6 flex items-center justify-center bg-transparent border-none cursor-pointer text-gray-600 hover:text-gray-900"
-        onClick={handleToggle}
-      >
-        {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-      </button>
+    <>
+      <aside className={sidebarClasses}>
+        {isMobile ? (
+          // Кнопка закрытия для мобильной версии
+          <button
+            className="absolute top-4 right-4 p-1.5 rounded-full bg-gray-100 text-gray-600 transition-colors"
+            onClick={onClose}
+            aria-label="Закрыть меню"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        ) : (
+          // Кнопка сворачивания для десктопной версии
+          <button
+            className="absolute top-20 -right-3.5 p-1.5 h-7 w-7 flex items-center justify-center bg-white dark:bg-gray-800 rounded-full border border-gray-200 dark:border-gray-700 cursor-pointer text-gray-600 dark:text-gray-400 shadow-sm transition-all z-30"
+            onClick={handleToggle}
+            aria-label={collapsed ? "Развернуть меню" : "Свернуть меню"}
+          >
+            {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </button>
+        )}
 
-      <div className="h-full overflow-y-auto p-3 pt-8">
-        <div className="space-y-1">
-          {filteredNavItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center justify-between py-2 px-3 rounded-md transition-colors ${
-                pathname === item.href
-                  ? "bg-blue-50 text-blue-600 font-medium"
-                  : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <span
-                  className={`flex h-8 w-8 items-center justify-center rounded-md ${
-                    pathname === item.href
-                      ? "bg-blue-100 text-blue-600"
-                      : "text-gray-500"
-                  }`}
+        <div
+          className={cn(
+            "h-full overflow-y-auto pt-16 pb-24",
+            collapsed ? "px-2" : "px-3"
+          )}
+        >
+          <div className="space-y-1.5 staggered-fade-in mt-3">
+            {filteredNavItems.map((item, index) => {
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center justify-between py-2.5 px-3 rounded-lg transition-all",
+                    isActive
+                      ? "bg-primary-light dark:bg-primary/20 text-primary font-medium"
+                      : "text-gray-600 dark:text-gray-300",
+                    collapsed && !isMobile ? "justify-center" : "",
+                    index === 0 ? "mt-2" : ""
+                  )}
+                  onClick={isMobile && onClose ? onClose : undefined}
                 >
-                  {item.icon}
-                </span>
-                {!collapsed && (
-                  <span className="truncate text-sm">{item.title}</span>
-                )}
-              </div>
+                  <div
+                    className={cn(
+                      "flex items-center gap-3",
+                      collapsed && !isMobile ? "justify-center" : ""
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+                        isActive
+                          ? "bg-primary/10 dark:bg-primary/20 text-primary"
+                          : "text-gray-500 dark:text-gray-400"
+                      )}
+                    >
+                      {item.icon}
+                    </span>
+                    {(!collapsed || isMobile) && (
+                      <span className="truncate text-sm">{item.title}</span>
+                    )}
+                  </div>
 
-              {!collapsed && item.badge && (
-                <span
-                  className={`text-xs px-1.5 py-0.5 rounded-full text-white ${
-                    item.badgeColor || "bg-blue-500"
-                  }`}
-                >
-                  {item.badge}
-                </span>
-              )}
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      {!collapsed && (
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200">
-          <div className="bg-blue-50 rounded-md p-3 flex flex-col items-center text-center">
-            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mb-2">
-              <MenuSquare className="h-5 w-5 text-blue-600" />
-            </div>
-            <p className="text-sm font-medium text-gray-900">Нужна помощь?</p>
-            <p className="text-xs text-gray-500 mt-1">
-              Посетите наш справочный центр
-            </p>
-            <button className="mt-2 text-sm text-blue-600 hover:underline">
-              Открыть справку
-            </button>
+                  {(!collapsed || isMobile) && item.badge && (
+                    <span
+                      className={cn(
+                        "text-xs px-1.5 py-0.5 rounded-full text-white",
+                        item.badgeColor || "bg-primary"
+                      )}
+                    >
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
           </div>
         </div>
-      )}
-    </aside>
+
+        {(!collapsed || isMobile) && (
+          <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-white">
+            <div className="p-4 rounded-lg bg-white shadow-sm">
+              <div className="flex flex-col items-center text-center">
+                <HelpCircle className="h-6 w-6 mb-2 text-primary" />
+                <h4 className="text-sm font-medium text-gray-900">
+                  Нужна помощь?
+                </h4>
+                <p className="text-xs mt-1 text-gray-600">
+                  Посетите наш справочный центр
+                </p>
+                <button
+                  className="mt-3 text-sm text-primary"
+                  onClick={() => setShowAIChat(true)}
+                >
+                  Открыть справку
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {collapsed && !isMobile && (
+          <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-gray-200 bg-white">
+            <div className="flex justify-center">
+              <button
+                className="p-2 rounded-full bg-white text-primary"
+                onClick={() => setShowAIChat(true)}
+              >
+                <HelpCircle className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        )}
+      </aside>
+
+      <AIChat open={showAIChat} onOpenChange={setShowAIChat} />
+    </>
   );
 }

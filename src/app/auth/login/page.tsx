@@ -13,7 +13,7 @@ export default function LoginPage() {
               <span className="text-white font-bold text-lg">ДП</span>
             </div>
             <span className="ml-2 text-2xl font-bold text-gray-900">
-              Диплом.Платформа
+              DiploMate
             </span>
           </Link>
           <p className="mt-2 text-gray-600">
@@ -43,7 +43,7 @@ export default function LoginPage() {
         </div>
 
         <div className="mt-8 text-center text-sm text-gray-500">
-          © 2025 Диплом.Платформа · Все права защищены
+          © 2025 DiploMate · Все права защищены
         </div>
       </div>
     </div>
