@@ -122,9 +122,9 @@ export function Sidebar({
 
   // В мобильном режиме сайдбар всегда развернут (не collapsed)
   const sidebarClasses = isMobile
-    ? "fixed top-0 left-0 h-full w-72 bg-white dark:bg-[#141414] z-50 shadow-xl border-r border-gray-200 dark:border-gray-800"
+    ? "fixed top-0 left-0 h-full w-72 bg-white z-50 shadow-xl border-r border-gray-200"
     : cn(
-        "fixed left-0 top-0 h-full bg-white dark:bg-[#141414] border-r border-gray-200 dark:border-gray-800 transition-all duration-300 z-20",
+        "fixed left-0 top-0 h-full bg-white border-r border-gray-200 transition-all duration-300 z-20",
         collapsed ? "w-20" : "w-64"
       );
 
@@ -143,7 +143,7 @@ export function Sidebar({
         ) : (
           // Кнопка сворачивания для десктопной версии
           <button
-            className="absolute top-20 -right-3.5 p-1.5 h-7 w-7 flex items-center justify-center bg-white dark:bg-gray-800 rounded-full border border-gray-200 dark:border-gray-700 cursor-pointer text-gray-600 dark:text-gray-400 shadow-sm transition-all z-30"
+            className="absolute top-20 -right-3.5 p-1.5 h-7 w-7 flex items-center justify-center bg-white rounded-full border border-gray-200 cursor-pointer text-gray-600 shadow-sm transition-all z-30"
             onClick={handleToggle}
             aria-label={collapsed ? "Развернуть меню" : "Свернуть меню"}
           >
@@ -167,8 +167,8 @@ export function Sidebar({
                   className={cn(
                     "flex items-center justify-between py-2.5 px-3 rounded-lg transition-all",
                     isActive
-                      ? "bg-primary-light dark:bg-primary/20 text-primary font-medium"
-                      : "text-gray-600 dark:text-gray-300",
+                      ? "bg-primary-light text-primary font-medium"
+                      : "text-gray-600",
                     collapsed && !isMobile ? "justify-center" : "",
                     index === 0 ? "mt-2" : ""
                   )}
@@ -184,8 +184,8 @@ export function Sidebar({
                       className={cn(
                         "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
                         isActive
-                          ? "bg-primary/10 dark:bg-primary/20 text-primary"
-                          : "text-gray-500 dark:text-gray-400"
+                          ? "bg-primary/10 text-primary"
+                          : "text-gray-500"
                       )}
                     >
                       {item.icon}

@@ -15,11 +15,10 @@ import { Switch } from "@/shared/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { useState } from "react";
 import { Bell, Shield, Palette, Moon, Sun } from "lucide-react";
-import { useTheme } from "@/app/providers/theme-provider";
 
 export default function SettingsPage() {
   const { toast } = useToast();
-  const { theme, toggleTheme } = useTheme();
+
   const [activeTab, setActiveTab] = useState("account");
 
   const handleSaveSettings = () => {
@@ -212,28 +211,6 @@ export default function SettingsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Label className="text-base font-medium">Тема</Label>
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    <Button
-                      variant={theme === "light" ? "default" : "outline"}
-                      className="flex-1 py-6 flex flex-col items-center gap-2"
-                      onClick={() => theme === "dark" && toggleTheme()}
-                    >
-                      <Sun className="h-6 w-6" />
-                      <span>Светлая</span>
-                    </Button>
-                    <Button
-                      variant={theme === "dark" ? "default" : "outline"}
-                      className="flex-1 py-6 flex flex-col items-center gap-2"
-                      onClick={() => theme === "light" && toggleTheme()}
-                    >
-                      <Moon className="h-6 w-6" />
-                      <span>Темная</span>
-                    </Button>
-                  </div>
-                </div>
-
                 <div className="space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0 py-3 border-b border-gray-100">
                     <div className="space-y-0.5">

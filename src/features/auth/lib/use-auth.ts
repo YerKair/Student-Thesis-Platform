@@ -245,9 +245,11 @@ export function useAuth() {
   // Функция входа
   const login = async (credentials: LoginCredentials) => {
     setAuthState((prev) => ({ ...prev, isLoading: true }));
+    console.log("Starting login process");
 
     try {
       const result = await AuthService.login(credentials);
+      console.log("Login successful, updating auth state");
 
       setAuthState({
         user: result.user,
@@ -256,6 +258,7 @@ export function useAuth() {
         isAuthenticated: true,
       });
 
+      console.log("Auth state updated, returning result");
       return result;
     } catch (error) {
       setAuthState((prev) => ({ ...prev, isLoading: false }));

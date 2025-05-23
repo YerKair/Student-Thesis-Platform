@@ -53,7 +53,7 @@ export default function DashboardLayout({
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen flex flex-col bg-white dark:bg-[#0a0a0a] light:bg-white transition-colors">
+      <div className="min-h-screen flex flex-col bg-white">
         {/* Фиксированный хедер */}
         <div className="fixed top-0 left-0 right-0 z-40">
           <Header />
@@ -88,7 +88,7 @@ export default function DashboardLayout({
             </div>
           )}
 
-          <main className="bg-white dark:bg-[#0a0a0a] light:bg-white min-h-[calc(100vh-4rem)] p-1">
+          <main className="bg-white min-h-[calc(100vh-4rem)] p-4">
             {children}
           </main>
         </div>

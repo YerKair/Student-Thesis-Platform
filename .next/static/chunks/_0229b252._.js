@@ -97,10 +97,14 @@ var _s = __turbopack_context__.k.signature();
 ;
 ;
 // Динамический импорт с отключенным SSR для ThemeToggle
-const ThemeToggle = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$shared$2f$lib$2f$app$2d$dynamic$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"])(()=>__turbopack_context__.r("[project]/src/shared/ui/theme-toggle.tsx [app-client] (ecmascript, next/dynamic entry, async loader)")(__turbopack_context__.i).then((mod)=>mod.ThemeToggle), {
+const ThemeToggle = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$shared$2f$lib$2f$app$2d$dynamic$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"])(()=>(()=>{
+        const e = new Error("Cannot find module '@/shared/ui/theme-toggle'");
+        e.code = 'MODULE_NOT_FOUND';
+        throw e;
+    })().then((mod)=>mod.ThemeToggle), {
     loadableGenerated: {
         modules: [
-            "[project]/src/shared/ui/theme-toggle.tsx [app-client] (ecmascript, next/dynamic entry)"
+            null
         ]
     },
     ssr: false

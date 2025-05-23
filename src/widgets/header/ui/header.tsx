@@ -4,10 +4,9 @@ import Link from "next/link";
 import { useAuthContext } from "@/app/providers/auth-provider";
 import { LogoutButton } from "@/features/auth/ui/logout-button";
 import { User, ChevronDown, Bell, MessageSquare } from "lucide-react";
-import { ThemeToggle } from "@/shared/ui/theme-toggle";
+
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@/shared/lib/utils";
-import { useTheme } from "@/app/providers/theme-provider";
 
 interface HeaderProps {
   children?: React.ReactNode;
@@ -15,7 +14,7 @@ interface HeaderProps {
 
 export function Header({ children }: HeaderProps) {
   const { user, isAuthenticated } = useAuthContext();
-  const { toggleTheme } = useTheme();
+
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -39,29 +38,26 @@ export function Header({ children }: HeaderProps) {
       case "admin":
         return {
           text: "Администратор",
-          bgColor: "bg-purple-500 dark:bg-purple-600",
-          textColor: "text-black dark:text-white",
+          bgColor: "bg-purple-500",
+          textColor: "text-black",
         };
       case "teacher":
         return {
           text: "Преподаватель",
-          bgColor: "bg-primary dark:bg-primary/90",
-          textColor: "text-black dark:text-white",
+          bgColor: "bg-primary",
+          textColor: "text-black",
         };
       default:
         return {
           text: "Студент",
-          bgColor: "bg-green-800 dark:bg-green-300",
-          textColor: "text-black dark:text-white",
+          bgColor: "bg-green-800",
+          textColor: "text-black",
         };
     }
   };
 
   return (
-    <header
-      style={{ backgroundColor: "white" }}
-      className="sticky top-0 z-40 w-full border-b border-gray-200 shadow-sm bg-white dark:bg-[#141414]"
-    >
+    <header className="sticky top-0 z-40 w-full border-b border-gray-200 shadow-sm bg-white">
       <div className="px-4 h-16 flex items-center justify-between">
         <div className="flex items-center">
           {/* Гамбургер меню, отображаемое только на мобильных */}
@@ -71,7 +67,7 @@ export function Header({ children }: HeaderProps) {
             <div className="h-9 w-9 rounded-full gradient-primary flex items-center justify-center shadow-sm">
               <span className="text-white font-bold text-sm">ДП</span>
             </div>
-            <span className="font-semibold text-xl hidden sm:inline-block text-black dark:white">
+            <span className="font-semibold text-xl hidden sm:inline-block text-black">
               DiploMate
             </span>
           </Link>
@@ -80,34 +76,32 @@ export function Header({ children }: HeaderProps) {
         {isAuthenticated && user ? (
           <div className="flex items-center gap-3">
             {/* Notifications button */}
-            <button className="relative h-9 w-9 rounded-full flex items-center justify-center bg-gray-50 hover:bg-gray-100 dark:bg-gray-50 dark:hover:bg-gray-100 text-gray-700 dark:text-gray-700 transition-colors">
+            <button className="relative h-9 w-9 rounded-full flex items-center justify-center bg-gray-50 hover:bg-gray-100 text-gray-700 transition-colors">
               <Bell className="h-5 w-5" />
               <span className="absolute top-0 right-0 h-2.5 w-2.5 rounded-full bg-success"></span>
             </button>
 
             {/* Messages button */}
-            <button className="h-9 w-9 rounded-full hidden sm:flex items-center justify-center bg-gray-50 hover:bg-gray-100 dark:bg-gray-50 dark:hover:bg-gray-100 text-gray-700 dark:text-gray-700 transition-colors">
+            <button className="h-9 w-9 rounded-full hidden sm:flex items-center justify-center bg-gray-50 hover:bg-gray-100 text-gray-700 transition-colors">
               <MessageSquare className="h-5 w-5" />
             </button>
 
-            <ThemeToggle className="hidden sm:flex" />
-
             <div className="relative" ref={menuRef}>
               <button
-                className="flex items-center gap-2 py-1.5 pl-1.5 pr-2.5 rounded-full bg-gray-50 dark:bg-gray-50 hover:bg-gray-100 dark:hover:bg-gray-100 transition-colors"
+                className="flex items-center gap-2 py-1.5 pl-1.5 pr-2.5 rounded-full bg-gray-50 hover:bg-gray-100 transition-colors"
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
               >
-                <div className="h-8 w-8 rounded-full bg-primary/10 dark:bg-primary/10 flex items-center justify-center">
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
                   <User className="h-4 w-4 text-primary" />
                 </div>
                 <div className="hidden sm:flex flex-col items-start">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-700 max-w-[120px] truncate">
+                  <span className="text-sm font-medium text-gray-700 max-w-[120px] truncate">
                     {user.name.split(" ")[0]}
                   </span>
                 </div>
                 <ChevronDown
                   className={cn(
-                    "h-4 w-4 text-gray-700 dark:text-gray-700 duration-300",
+                    "h-4 w-4 text-gray-700 duration-300",
                     userMenuOpen ? "rotate-180" : "rotate-0"
                   )}
                 />
@@ -115,12 +109,12 @@ export function Header({ children }: HeaderProps) {
 
               {/* Выпадающее меню пользователя */}
               {userMenuOpen && (
-                <div className="absolute right-0 mt-2 w-60 rounded-lg shadow-lg bg-white dark:bg-gray-50 ring-1 ring-black ring-opacity-5 dark:ring-black dark:ring-opacity-10 divide-y divide-gray-100 dark:divide-gray-200 border border-gray-200 dark:border-gray-300 overflow-hidden fade-in">
-                  <div className="px-4 py-3.5">
-                    <p className="text-sm leading-5 font-medium text-gray-900 dark:text-gray-900 truncate">
+                <div className="absolute right-0 mt-2 w-60 rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5 divide-y divide-gray-100 border border-gray-200 overflow-hidden fade-in">
+                  <div className="px-4 py-3">
+                    <p className="text-sm leading-5 font-medium text-gray-900 truncate">
                       {user.name}
                     </p>
-                    <p className="text-sm leading-5 text-gray-500 dark:text-gray-600 truncate">
+                    <p className="text-sm leading-5 text-gray-500 truncate">
                       {user.email}
                     </p>
                     {user.role && (
@@ -138,14 +132,14 @@ export function Header({ children }: HeaderProps) {
                   <div className="py-1">
                     <Link
                       href="/dashboard/profile"
-                      className="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-100"
+                      className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100"
                       onClick={() => setUserMenuOpen(false)}
                     >
                       Профиль
                     </Link>
                     <Link
                       href="/dashboard/settings"
-                      className="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-100"
+                      className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100"
                       onClick={() => setUserMenuOpen(false)}
                     >
                       Настройки
@@ -153,10 +147,10 @@ export function Header({ children }: HeaderProps) {
 
                     {/* Кнопка переключения темы для мобильных */}
                     <button
-                      className="flex sm:hidden w-full items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-100"
+                      className="flex sm:hidden w-full items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100"
                       onClick={() => {
                         // Добавить здесь логику переключения темы
-                        toggleTheme();
+
                         setUserMenuOpen(false);
                       }}
                     >
@@ -169,7 +163,7 @@ export function Header({ children }: HeaderProps) {
                         setUserMenuOpen(false);
                         // Логика выхода из системы
                       }}
-                      className="block w-full text-left px-4 py-2.5 text-sm text-destructive hover:bg-gray-100 dark:hover:bg-gray-100"
+                      className="block w-full text-left px-4 py-2.5 text-sm text-destructive hover:bg-gray-100"
                     >
                       Выйти
                     </button>

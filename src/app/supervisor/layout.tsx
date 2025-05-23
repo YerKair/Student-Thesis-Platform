@@ -5,11 +5,6 @@ import Link from "next/link";
 import { Bell, Home, Users } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import dynamic from "next/dynamic";
-// Динамический импорт с отключенным SSR для ThemeToggle
-const ThemeToggle = dynamic(
-  () => import("@/shared/ui/theme-toggle").then((mod) => mod.ThemeToggle),
-  { ssr: false }
-);
 export default function SupervisorLayout({
   children,
 }: {
@@ -36,7 +31,6 @@ export default function SupervisorLayout({
             </Link>
           </div>
           <div className="flex items-center space-x-2">
-            {mounted && <ThemeToggle />}
             <Button
               variant="outline"
               size="sm"

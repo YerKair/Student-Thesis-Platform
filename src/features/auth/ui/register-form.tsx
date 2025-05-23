@@ -1,32 +1,47 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 
-import { Button } from "@/shared/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/shared/ui/form";
-import { Input } from "@/shared/ui/input";
 import { useToast } from "@/shared/ui/use-toast";
 import { registerSchema, RegisterFormValues } from "../model";
 import { useAuthContext } from "@/app/providers/auth-provider";
+import { SpaceInput } from "@/shared/ui/space-input";
+import { SpaceButton } from "@/shared/ui/space-button";
+import { SpaceProgressLoader } from "@/shared/ui/space-progress-loader";
+import { FlashTransition } from "@/shared/ui/flash-transition";
 
 export function RegisterForm() {
   const router = useRouter();
   const { toast } = useToast();
-  const { register, isLoading } = useAuthContext();
+  const { register: registerUser, isLoading } = useAuthContext();
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [regProgress, setRegProgress] = useState(0);
+  const [showPortal, setShowPortal] = useState(false);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+
+  // Отладочное сообщение при изменении showPortal
+  useEffect(() => {
+    console.log("showPortal state changed:", showPortal);
+  }, [showPortal]);
+
+  // Эффект для перенаправления после успешной регистрации
+  useEffect(() => {
+    if (registrationSuccess) {
+      const timer = setTimeout(() => {
+        console.log("Registration successful, redirecting to dashboard");
+        router.push("/dashboard");
+      }, 1000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [registrationSuccess, router]);
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -38,37 +53,64 @@ export function RegisterForm() {
     },
   });
 
-  async function onSubmit(data: RegisterFormValues) {
-    setServerError(null);
+  const onSubmit = async (values: RegisterFormValues) => {
+    setIsSubmitting(true);
+    setShowPortal(true);
+    setRegProgress(0);
+    console.log("Registration button clicked, showing flash immediately");
 
     try {
-      const result = await register(data);
+      // Симулируем многоэтапный процесс регистрации
+      await simulateProgress(0, 30);
 
-      if (result.user) {
+      // Проверка email
+      await simulateProgress(30, 50);
+
+      // Создание учетной записи
+      await simulateProgress(50, 70);
+
+      // Настройка профиля
+      await simulateProgress(70, 100);
+
+      // Успешная регистрация
+      console.log("Registration successful");
+
         toast({
           title: "Регистрация выполнена успешно",
-          description: "Вы будете перенаправлены в личный кабинет",
-        });
-
-        // Задержка перед перенаправлением, чтобы пользователь увидел сообщение
-        setTimeout(() => {
-          router.push("/dashboard");
-        }, 1500);
-      }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Произошла ошибка при регистрации";
-
-      setServerError(errorMessage);
-      toast({
-        variant: "destructive",
-        title: "Ошибка регистрации",
-        description: errorMessage,
+        description: "Подготовка к квантовому переходу...",
+        duration: 2000,
       });
+
+      // Закрываем лоадер
+      setIsSubmitting(false);
+      console.log(
+        "Registration successful, flash transition should complete soon"
+      );
+    } catch (error) {
+      setServerError("Что-то пошло не так. Пожалуйста, попробуйте еще раз.");
+      setIsSubmitting(false);
+      setShowPortal(false);
     }
-  }
+  };
+
+  // Вспомогательная функция для имитации прогресса
+  const simulateProgress = async (start: number, end: number) => {
+    const duration = 600; // Ускоряем процесс до 0.6 секунды на этап
+    const steps = 8;
+    const increment = (end - start) / steps;
+
+    for (let i = 0; i <= steps; i++) {
+      setRegProgress(start + increment * i);
+      await new Promise((resolve) => setTimeout(resolve, duration / steps));
+    }
+  };
+
+  const handlePortalComplete = () => {
+    console.log(
+      "Portal animation complete, setting registrationSuccess to true"
+    );
+    setRegistrationSuccess(true);
+  };
 
   const formFields = [
     {
@@ -87,92 +129,118 @@ export function RegisterForm() {
       name: "password" as const,
       label: "Пароль",
       placeholder: "••••••••",
-      type: showPassword ? "text" : "password",
+      type: "password",
       showPasswordToggle: true,
     },
     {
       name: "passwordConfirm" as const,
       label: "Подтверждение пароля",
       placeholder: "••••••••",
-      type: showPassword ? "text" : "password",
+      type: "password",
       showPasswordToggle: true,
     },
   ];
 
+  // Анимация для формы
+  const formAnimation = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.2,
+      },
+    },
+  };
+
+  const itemAnimation = {
+    hidden: { opacity: 0, y: 10 },
+    visible: { opacity: 1, y: 0 },
+  };
+
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+    <>
+      <SpaceProgressLoader
+        isLoading={isSubmitting}
+        progress={regProgress}
+        message="Подготовка к регистрации..."
+      />
+
+      <FlashTransition
+        isActive={showPortal}
+        onComplete={handlePortalComplete}
+        duration={2000}
+        color="#8b5cf6"
+        intensity="high"
+      />
+
+      <motion.form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="space-y-5"
+        variants={formAnimation}
+        initial="hidden"
+        animate="visible"
+      >
         {formFields.map((field) => (
-          <FormField
-            key={field.name}
-            control={form.control}
-            name={field.name}
-            render={({ field: formField }) => (
-              <FormItem>
-                <FormLabel className="text-gray-700">{field.label}</FormLabel>
-                <FormControl>
-                  <div className="relative">
-                    <Input
+          <motion.div key={field.name} variants={itemAnimation}>
+            <SpaceInput
+              label={field.label}
                       type={field.type}
                       placeholder={field.placeholder}
-                      className="border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      {...formField}
-                    />
-                    {field.showPasswordToggle && (
-                      <button
-                        type="button"
-                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    )}
-                  </div>
-                </FormControl>
-                <FormMessage className="text-red-500" />
-              </FormItem>
-            )}
-          />
+              showPasswordToggle={field.showPasswordToggle}
+              {...form.register(field.name)}
+              error={form.formState.errors[field.name]?.message as string}
+            />
+          </motion.div>
         ))}
 
-        <div className="flex items-center mt-4">
+        <motion.div className="flex items-center mt-4" variants={itemAnimation}>
           <input
             id="terms"
             name="terms"
             type="checkbox"
-            className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            className="h-4 w-4 rounded border-gray-700 bg-gray-900 text-blue-600 focus:ring-blue-500"
           />
-          <label htmlFor="terms" className="ml-2 block text-sm text-gray-700">
+          <label htmlFor="terms" className="ml-2 block text-sm text-gray-300">
             Я согласен с{" "}
-            <Link href="#" className="text-blue-600 hover:text-blue-800">
+            <Link
+              href="#"
+              className="text-blue-400 hover:text-blue-300 transition-colors"
+            >
               условиями использования
             </Link>{" "}
             и{" "}
-            <Link href="#" className="text-blue-600 hover:text-blue-800">
+            <Link
+              href="#"
+              className="text-blue-400 hover:text-blue-300 transition-colors"
+            >
               политикой конфиденциальности
             </Link>
           </label>
-        </div>
+        </motion.div>
 
-        <Button
+        {serverError && (
+          <motion.div
+            className="bg-red-500/10 border border-red-500/30 rounded-md p-3 text-sm text-red-200"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            {serverError}
+          </motion.div>
+        )}
+
+        <motion.div variants={itemAnimation}>
+          <SpaceButton
           type="submit"
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white transition-colors"
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <div className="flex items-center justify-center">
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              <span>Регистрация...</span>
-            </div>
-          ) : (
-            "Зарегистрироваться"
-          )}
-        </Button>
-      </form>
-    </Form>
+            className="w-full"
+            isLoading={isLoading || isSubmitting}
+          >
+            Зарегистрироваться
+          </SpaceButton>
+        </motion.div>
+      </motion.form>
+    </>
   );
 }

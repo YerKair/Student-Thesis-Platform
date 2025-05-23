@@ -451,14 +451,17 @@ function useAuth() {
                 ...prev,
                 isLoading: true
             }));
+        console.log("Starting login process");
         try {
             const result = await AuthService.login(credentials);
+            console.log("Login successful, updating auth state");
             setAuthState({
                 user: result.user,
                 token: result.token,
                 isLoading: false,
                 isAuthenticated: true
             });
+            console.log("Auth state updated, returning result");
             return result;
         } catch (error) {
             setAuthState((prev)=>({

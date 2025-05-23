@@ -39,7 +39,7 @@ export default function DashboardPage() {
       description: "Не состоите в команде",
       icon: <Users className="h-5 w-5" />,
       value: (
-        <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 text-xs mt-2 inline-block">
+        <span className="px-2 py-1 rounded-full bg-gray-100 text-xs mt-2 inline-block">
           Требуется действие
         </span>
       ),
@@ -53,9 +53,7 @@ export default function DashboardPage() {
       value: (
         <div className="flex items-center gap-2 mt-2">
           <span className="h-2 w-2 rounded-full bg-amber-500"></span>
-          <span className="text-sm text-gray-600 dark:text-gray-400">
-            Требуется подпись
-          </span>
+          <span className="text-sm text-gray-600">Требуется подпись</span>
         </div>
       ),
       color: "bg-amber-500",
@@ -102,13 +100,13 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="space-y-6 m-15">
+    <div className="container mx-auto px-4 py-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
             Добро пожаловать, {user?.name.split(" ")[0] || "пользователь"}!
           </h1>
-          <p className="text-sm md:text-base text-gray-600 dark:text-gray-400">
+          <p className="text-sm md:text-base text-gray-600">
             Здесь вы можете отслеживать прогресс вашей работы
           </p>
         </div>
@@ -125,16 +123,13 @@ export default function DashboardPage() {
       {/* Статистика */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, i) => (
-          <Card
-            key={i}
-            className="overflow-hidden transition-shadow dark:border-gray-800"
-          >
+          <Card key={i} className="overflow-hidden transition-shadow">
             <div className={`h-1 w-full ${stat.color}`}></div>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">
                 {stat.title}
               </CardTitle>
-              <div className="rounded-full p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
+              <div className="rounded-full p-2 bg-blue-50 text-blue-600">
                 {stat.icon}
               </div>
             </CardHeader>
@@ -154,7 +149,7 @@ export default function DashboardPage() {
       {/* Ближайшие события и рекомендации */}
       <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
         {/* Ближайшие события */}
-        <Card className="lg:col-span-2 dark:border-gray-800">
+        <Card className="lg:col-span-2">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -174,16 +169,16 @@ export default function DashboardPage() {
                 events.map((event, i) => (
                   <div
                     key={i}
-                    className="flex items-start gap-4 p-3 rounded-lg border dark:border-gray-800 transition-colors"
+                    className="flex items-start gap-4 p-3 rounded-lg border transition-colors"
                   >
-                    <div className="rounded-full p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
+                    <div className="rounded-full p-2 bg-blue-50 text-blue-600">
                       {event.icon}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm md:text-base truncate">
                         {event.title}
                       </p>
-                      <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
+                      <p className="text-xs md:text-sm text-gray-500">
                         {event.date}
                       </p>
                     </div>
@@ -197,7 +192,7 @@ export default function DashboardPage() {
                   </div>
                 ))
               ) : (
-                <div className="h-32 flex items-center justify-center text-gray-500 dark:text-gray-400">
+                <div className="h-32 flex items-center justify-center text-gray-500">
                   У вас нет предстоящих событий
                 </div>
               )}
@@ -213,7 +208,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Рекомендации */}
-        <Card className="bg-gradient-to-b from-blue-50 to-white dark:from-blue-900/10 dark:to-transparent border-blue-100 dark:border-blue-900/20">
+        <Card className="bg-gradient-to-b from-blue-50 to-white border-blue-100">
           <CardHeader>
             <CardTitle className="text-lg">Рекомендации</CardTitle>
             <CardDescription>
@@ -224,12 +219,12 @@ export default function DashboardPage() {
             <div className="space-y-4">
               {recommendations.map((rec, i) => (
                 <div key={i} className="flex items-start gap-3">
-                  <div className="rounded-full p-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 mt-0.5">
+                  <div className="rounded-full p-1.5 bg-blue-100 text-blue-600 mt-0.5">
                     <CheckCircle2 className="h-4 w-4" />
                   </div>
                   <div>
                     <p className="font-medium text-sm">{rec.title}</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                    <p className="text-xs text-gray-600 mt-0.5">
                       {rec.description}
                     </p>
                   </div>
