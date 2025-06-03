@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { User } from "@/entities/user/model/types";
 import {
@@ -21,42 +21,31 @@ class AuthService {
     try {
       console.log("Trying to login with credentials:", credentials.email);
 
-      // Создаем FormData для отправки
+      // Создаем FormData для OAuth2 password flow
       const formData = new URLSearchParams();
-      formData.append("username", credentials.email); // Бэкенд ожидает параметр 'username'
+      formData.append("username", credentials.email);
       formData.append("password", credentials.password);
 
       const response = await fetch(`${API_BASE_URL}/login`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/x-www-form-urlencoded", // Важно: правильный Content-Type
-          Accept: "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
         },
-        body: formData.toString(), // Преобразуем в строку
-        credentials: "include", // Важно для CORS с куками
-        mode: "cors", // Явно указываем режим CORS
+        body: formData.toString(),
       });
 
-      // Детальная обработка ошибок
       if (!response.ok) {
-        // Пытаемся получить текст ошибки
-        let errorText;
+        let errorText = await response.text();
+        console.error(
+          "Login error response:",
+          errorText,
+          "Status:",
+          response.status
+        );
         try {
-          errorText = await response.text();
-          console.error(
-            "Login error response:",
-            errorText,
-            "Status:",
-            response.status
-          );
-
-          // Пытаемся распарсить как JSON
           const errorJson = JSON.parse(errorText);
-          const errorMessage = errorJson.detail || "Ошибка при входе";
-          throw new Error(errorMessage);
+          throw new Error(errorJson.detail || "Ошибка при входе");
         } catch (parseError) {
-          // Если не смогли распарсить JSON, возвращаем текст ошибки или статус
-          console.error("Could not parse error response:", parseError);
           throw new Error(errorText || `Ошибка сервера: ${response.status}`);
         }
       }
@@ -64,18 +53,57 @@ class AuthService {
       const data = await response.json();
       console.log("Login successful, received data:", data);
 
-      // Получаем профиль пользователя
-      const userProfile = await AuthService.getUserProfile(data.access_token);
-      console.log("User profile:", userProfile);
+      // Получаем информацию о пользователе
+      const userResponse = await fetch(`${API_BASE_URL}/me`, {
+        headers: {
+          Authorization: `Bearer ${data.access_token}`,
+        },
+      });
+
+      if (!userResponse.ok) {
+        throw new Error("Failed to fetch user profile");
+      }
+
+      const userData = await userResponse.json();
+      console.log("User data:", userData);
+
+      // Получаем полный профиль пользователя
+      const profileResponse = await fetch(
+        `${API_BASE_URL}/users/get-user-by-email?email=${userData.message.username}`,
+        {
+          headers: {
+            Authorization: `Bearer ${data.access_token}`,
+          },
+        }
+      );
+
+      if (!profileResponse.ok) {
+        throw new Error("Failed to fetch user profile");
+      }
+
+      const profileData = await profileResponse.json();
+      console.log("Profile data:", profileData);
+
+      // Формируем профиль пользователя
+      const userProfile = {
+        id: profileData.id?.toString() || "1",
+        name: profileData.fullname || credentials.email.split("@")[0],
+        email: profileData.email || credentials.email,
+        role: profileData.roles?.[0] || "student",
+        isActive: true,
+        createdAt: profileData.created_at || new Date().toISOString(),
+      };
 
       // Сохраняем токены в localStorage
-      localStorage.setItem("authToken", data.access_token);
-      localStorage.setItem("user", JSON.stringify(userProfile));
+      if (typeof window !== "undefined") {
+        localStorage.setItem("authToken", data.access_token);
+        localStorage.setItem("user", JSON.stringify(userProfile));
+      }
 
       return {
         user: userProfile,
         token: data.access_token,
-        refreshToken: "", // В бэкенде refresh token не используется
+        refreshToken: "",
       };
     } catch (error) {
       console.error("Login error:", error);
@@ -89,118 +117,59 @@ class AuthService {
     try {
       console.log("Attempting registration for:", credentials.email);
 
-      // Подготовка данных для API в соответствии с ожидаемым форматом бэкенда
       const registerData = {
         email: credentials.email,
         password: credentials.password,
         fullname: credentials.name,
       };
 
-      // Регистрация пользователя с обработкой CORS
       const registerResponse = await fetch(`${API_BASE_URL}/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Accept: "application/json",
         },
         body: JSON.stringify(registerData),
-        credentials: "include", // Важно для CORS с куками
-        mode: "cors", // Явно указываем режим CORS
       });
 
-      // Обработка ошибок
       if (!registerResponse.ok) {
-        // Пытаемся получить текст ошибки
-        let errorText;
+        let errorText = await registerResponse.text();
+        console.error("Registration error response:", errorText);
         try {
-          errorText = await registerResponse.text();
-          console.error("Registration error response:", errorText);
-
-          // Пытаемся распарсить как JSON
           const errorJson = JSON.parse(errorText);
-          const errorMessage = errorJson.detail || "Ошибка при регистрации";
-          throw new Error(errorMessage);
+          throw new Error(errorJson.detail || "Ошибка при регистрации");
         } catch (parseError) {
-          // Если не смогли распарсить JSON, возвращаем текст ошибки или статус
-          console.error("Could not parse error response:", parseError);
           throw new Error(
             errorText || `Ошибка сервера: ${registerResponse.status}`
           );
         }
       }
 
-      console.log("Registration successful");
-
-      // После успешной регистрации сразу создаем профиль пользователя без доп. запроса логина
-      const userProfile: User = {
-        id: "temp-id",
-        name: credentials.name,
+      // После успешной регистрации выполняем вход
+      return await AuthService.login({
         email: credentials.email,
-        role: "student",
-        isActive: true,
-        createdAt: new Date().toISOString(),
-      };
-
-      return {
-        user: userProfile,
-        token: "temp-token", // Временный токен - пользователь должен будет авторизоваться
-        refreshToken: "",
-      };
+        password: credentials.password,
+      });
     } catch (error) {
       console.error("Registration error:", error);
       throw error;
     }
   }
 
-  static async getUserProfile(token: string): Promise<User> {
-    const response = await fetch(`${API_BASE_URL}/me`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-      },
-      credentials: "include",
-      mode: "cors",
-    });
-
-    if (!response.ok) {
-      throw new Error("Не удалось получить профиль пользователя");
-    }
-
-    const userData = await response.json();
-    console.log("User data from API:", userData);
-
-    // Проверяем наличие нужных данных в ответе
-    if (!userData.message || !userData.message.username) {
-      throw new Error("Неверный формат данных профиля пользователя");
-    }
-
-    // Получаем данные пользователя из ответа API
-    const { username, fullname, roles, id } = userData.message;
-
-    // Создаем объект пользователя на основе полученных данных
-    const user: User = {
-      id: id?.toString() || "1", // Используем ID из API или дефолтное значение
-      name: fullname || username.split("@")[0], // Используем fullname если доступно, иначе часть email
-      email: username,
-      role: roles?.[0] || "student", // Берем первую роль из списка
-      isActive: true,
-      createdAt: new Date().toISOString(),
-    };
-
-    return user;
-  }
-
   static logout(): void {
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("refreshToken");
-    localStorage.removeItem("user");
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("user");
+    }
   }
 
   static isAuthenticated(): boolean {
+    if (typeof window === "undefined") return false;
     return !!localStorage.getItem("authToken");
   }
 
   static getUser(): User | null {
+    if (typeof window === "undefined") return null;
     const userJson = localStorage.getItem("user");
     if (!userJson) return null;
 
@@ -213,6 +182,7 @@ class AuthService {
   }
 
   static getToken(): string | null {
+    if (typeof window === "undefined") return null;
     return localStorage.getItem("authToken");
   }
 }
@@ -220,86 +190,96 @@ class AuthService {
 export function useAuth() {
   const router = useRouter();
   const [authState, setAuthState] = useState<AuthState>({
-    user: null,
-    token: null,
-    isLoading: true,
-    isAuthenticated: false,
+    user: AuthService.getUser(),
+    token: AuthService.getToken(),
+    isAuthenticated: AuthService.isAuthenticated(),
+    isLoading: false,
+    error: null,
   });
 
-  // Инициализация состояния аутентификации
-  useEffect(() => {
-    // В клиентском коде нужно проверять window, чтобы избежать ошибок SSR
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("authToken");
-      const user = AuthService.getUser();
+  const updateAuthState = useCallback(
+    (newState: Partial<AuthState>, redirectTo?: string) => {
+      setAuthState((prev) => ({ ...prev, ...newState }));
+      if (redirectTo) {
+        router.push(redirectTo);
+      }
+    },
+    [router]
+  );
 
-      setAuthState({
-        user,
-        token,
-        isLoading: false,
-        isAuthenticated: !!token && !!user,
-      });
-    }
-  }, []);
+  const login = useCallback(
+    async (credentials: LoginCredentials) => {
+      try {
+        updateAuthState({ isLoading: true, error: null });
+        const result = await AuthService.login(credentials);
 
-  // Функция входа
-  const login = async (credentials: LoginCredentials) => {
-    setAuthState((prev) => ({ ...prev, isLoading: true }));
-    console.log("Starting login process");
+        updateAuthState(
+          {
+            user: result.user,
+            token: result.token,
+            isAuthenticated: true,
+            isLoading: false,
+            error: null,
+          },
+          "/dashboard"
+        );
 
-    try {
-      const result = await AuthService.login(credentials);
-      console.log("Login successful, updating auth state");
+        return result;
+      } catch (error) {
+        console.error("Login error in hook:", error);
+        updateAuthState({
+          error: error instanceof Error ? error.message : "Ошибка при входе",
+          isLoading: false,
+        });
+        throw error;
+      }
+    },
+    [updateAuthState]
+  );
 
-      setAuthState({
-        user: result.user,
-        token: result.token,
-        isLoading: false,
-        isAuthenticated: true,
-      });
+  const register = useCallback(
+    async (credentials: RegisterCredentials) => {
+      try {
+        updateAuthState({ isLoading: true, error: null });
+        const result = await AuthService.register(credentials);
 
-      console.log("Auth state updated, returning result");
-      return result;
-    } catch (error) {
-      setAuthState((prev) => ({ ...prev, isLoading: false }));
-      throw error;
-    }
-  };
+        updateAuthState(
+          {
+            user: result.user,
+            token: result.token,
+            isLoading: false,
+            isAuthenticated: true,
+            error: null,
+          },
+          "/dashboard"
+        );
 
-  // Функция регистрации
-  const register = async (credentials: RegisterCredentials) => {
-    setAuthState((prev) => ({ ...prev, isLoading: true }));
+        return result;
+      } catch (error) {
+        updateAuthState({
+          isLoading: false,
+          error:
+            error instanceof Error ? error.message : "Ошибка при регистрации",
+        });
+        throw error;
+      }
+    },
+    [updateAuthState]
+  );
 
-    try {
-      const result = await AuthService.register(credentials);
-
-      // В случае успешной регистрации - не сохраняем состояние авторизации,
-      // т.к. нужно перенаправить на логин
-      setAuthState((prev) => ({
-        ...prev,
-        isLoading: false,
-      }));
-
-      return result;
-    } catch (error) {
-      setAuthState((prev) => ({ ...prev, isLoading: false }));
-      throw error;
-    }
-  };
-
-  // Функция выхода
-  const logout = () => {
+  const logout = useCallback(() => {
     AuthService.logout();
-
-    setAuthState({
-      user: null,
-      token: null,
-      isLoading: false,
-      isAuthenticated: false,
-    });
-
-    router.push("/auth/login");
-  };
+    updateAuthState(
+      {
+        user: null,
+        token: null,
+        isLoading: false,
+        isAuthenticated: false,
+        error: null,
+      },
+      "/auth/login"
+    );
+  }, [updateAuthState]);
 
   return {
     ...authState,

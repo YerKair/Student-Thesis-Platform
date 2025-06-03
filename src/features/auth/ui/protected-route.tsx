@@ -1,28 +1,33 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useCallback } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuthContext } from "@/app/providers/auth-provider";
-import { Loader2 } from "lucide-react";
+import { Spinner } from "@/shared/ui/spinner";
 
-export interface ProtectedRouteProps {
+interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const router = useRouter();
   const { isAuthenticated, isLoading } = useAuthContext();
+  const router = useRouter();
+  const pathname = usePathname();
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+  const checkAuth = useCallback(() => {
+    if (!isLoading && !isAuthenticated && pathname !== "/auth/login") {
       router.push("/auth/login");
     }
-  }, [isLoading, isAuthenticated, router]);
+  }, [isLoading, isAuthenticated, router, pathname]);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   if (isLoading) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      <div className="flex h-screen items-center justify-center">
+        <Spinner className="h-8 w-8" />
       </div>
     );
   }

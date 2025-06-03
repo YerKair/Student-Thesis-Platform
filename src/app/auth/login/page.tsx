@@ -6,7 +6,10 @@ import { motion } from "framer-motion";
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center p-4">
+    <div
+      className="min-h-screen flex flex-col justify-center items-center p-4"
+      data-auth="true"
+    >
       <motion.div
         className="w-full max-w-md"
         initial={{ opacity: 0, y: 20 }}
@@ -51,41 +54,45 @@ export default function LoginPage() {
           </motion.p>
         </motion.div>
 
-        <motion.div
-          className="backdrop-blur-md bg-black/30 border border-gray-700 rounded-lg shadow-lg p-8"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
-        >
+        <div className="relative isolate">
           <motion.div
-            className="mb-6"
-            initial={{ y: -10, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.4 }}
-          >
-            <h1 className="text-2xl font-bold text-white">Вход в систему</h1>
-            <p className="text-gray-300 text-sm mt-1">
-              Введите свои данные для входа в личный кабинет
-            </p>
-          </motion.div>
-
-          <LoginForm />
-
-          <motion.div
-            className="mt-6 text-center text-sm text-gray-300"
+            className="backdrop-blur-md bg-black/30 border border-gray-700 rounded-lg shadow-lg p-8"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
           >
-            Нет аккаунта?{" "}
-            <Link
-              href="/auth/register"
-              className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+            <motion.div
+              className="mb-6"
+              initial={{ y: -10, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.4 }}
             >
-              Зарегистрироваться
-            </Link>
+              <h1 className="text-2xl font-bold text-white">Вход в систему</h1>
+              <p className="text-gray-300 text-sm mt-1">
+                Введите свои данные для входа в личный кабинет
+              </p>
+            </motion.div>
+
+            <div className="relative z-10">
+              <LoginForm />
+            </div>
+
+            <motion.div
+              className="mt-6 text-center text-sm text-gray-300"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6 }}
+            >
+              Нет аккаунта?{" "}
+              <Link
+                href="/auth/register"
+                className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+              >
+                Зарегистрироваться
+              </Link>
+            </motion.div>
           </motion.div>
-        </motion.div>
+        </div>
 
         <motion.div
           className="mt-8 text-center text-sm text-gray-400"

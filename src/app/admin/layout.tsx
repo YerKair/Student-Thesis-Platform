@@ -135,7 +135,7 @@ export default function AdminLayout({
             </div>
             <div className="ml-3">
               <h1 className="font-bold text-gray-900">Админ-панель</h1>
-              <p className="text-xs text-gray-500">Диплом.Платформа</p>
+              <p className="text-xs text-gray-500">DiploMate</p>
             </div>
           </Link>
         </div>

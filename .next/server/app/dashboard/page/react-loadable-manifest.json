@@ -1,1 +1,23 @@
-{}
+{
+  "[project]/src/widgets/dashboard/stats.tsx [app-client] (ecmascript, next/dynamic entry)": {
+    "id": "[project]/src/widgets/dashboard/stats.tsx [app-client] (ecmascript, next/dynamic entry)",
+    "files": [
+      "static/chunks/_d81a623c._.js",
+      "static/chunks/src_widgets_dashboard_stats_tsx_18af2378._.js"
+    ]
+  },
+  "[project]/src/widgets/dashboard/recommendations.tsx [app-client] (ecmascript, next/dynamic entry)": {
+    "id": "[project]/src/widgets/dashboard/recommendations.tsx [app-client] (ecmascript, next/dynamic entry)",
+    "files": [
+      "static/chunks/_ad88ffa2._.js",
+      "static/chunks/src_widgets_dashboard_recommendations_tsx_18af2378._.js"
+    ]
+  },
+  "[project]/src/widgets/dashboard/events.tsx [app-client] (ecmascript, next/dynamic entry)": {
+    "id": "[project]/src/widgets/dashboard/events.tsx [app-client] (ecmascript, next/dynamic entry)",
+    "files": [
+      "static/chunks/_873932b6._.js",
+      "static/chunks/src_widgets_dashboard_events_tsx_18af2378._.js"
+    ]
+  }
+}

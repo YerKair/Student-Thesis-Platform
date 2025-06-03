@@ -15,6 +15,7 @@ export interface RegisterCredentials {
 export interface AuthState {
   user: User | null;
   token: string | null;
-  isLoading: boolean;
   isAuthenticated: boolean;
+  isLoading: boolean;
+  error: string | null;
 }

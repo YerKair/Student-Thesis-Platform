@@ -31,7 +31,7 @@ export const SpaceButton = forwardRef<HTMLButtonElement, SpaceButtonProps>(
   ) => {
     // Base classes
     const baseClasses =
-      "relative font-medium rounded-md focus:outline-none transition-all duration-300";
+      "relative font-medium rounded-md focus:outline-none transition-all duration-300 text-white";
 
     // Size classes
     const sizeClasses = {
@@ -43,9 +43,9 @@ export const SpaceButton = forwardRef<HTMLButtonElement, SpaceButtonProps>(
     // Variant classes
     const variantClasses = {
       primary:
-        "text-white bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800",
+        "bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white",
       secondary:
-        "text-white bg-gradient-to-r from-purple-600 to-indigo-700 hover:from-purple-700 hover:to-indigo-800",
+        "bg-gradient-to-r from-purple-600 to-indigo-700 hover:from-purple-700 hover:to-indigo-800 text-white",
     };
 
     return (
@@ -79,14 +79,14 @@ export const SpaceButton = forwardRef<HTMLButtonElement, SpaceButtonProps>(
         />
 
         {/* Button content */}
-        <div className="flex items-center justify-center">
+        <div className="flex items-center justify-center text-white">
           {isLoading ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              <span>Загрузка...</span>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin text-white" />
+              <span className="text-white">Загрузка...</span>
             </>
           ) : (
-            children
+            <span className="text-white">{children}</span>
           )}
         </div>
 

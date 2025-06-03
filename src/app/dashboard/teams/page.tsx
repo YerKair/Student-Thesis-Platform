@@ -1,29 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/shared/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/shared/ui/card";
-import { Input } from "@/shared/ui/input";
-import { Label } from "@/shared/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
-import {
-  Users,
-  UserPlus,
-  ExternalLink,
-  X,
-  User,
-  UserPlus2,
-} from "lucide-react";
-import { useToast } from "@/shared/ui/use-toast";
-import { useState, useEffect } from "react";
-import { useAuthContext } from "@/app/providers/auth-provider";
-import { Textarea } from "@/shared/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -31,97 +10,92 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/shared/ui/dialog";
-import { Badge } from "@/shared/ui/badge";
-
-// Тип для команды
-interface TeamMember {
-  id: string;
-  name: string;
-  role: string;
-  email: string;
-}
-
-interface Team {
-  id: string;
-  name: string;
-  description: string;
-  topic: string;
-  inviteCode: string;
-  createdAt: string;
-  members: TeamMember[];
-  createdBy: string;
-}
+import { Input } from "@/shared/ui/input";
+import { useToast } from "@/shared/ui/use-toast";
+import { useTeams } from "@/features/teams/lib/use-teams";
+import { TeamMember } from "@/entities/team/model/types";
+import { useAuthContext } from "@/app/providers/auth-provider";
 
 export default function TeamsPage() {
-  const { toast } = useToast();
+  const router = useRouter();
   const { user } = useAuthContext();
-  const [activeTab, setActiveTab] = useState("join");
+  const { toast } = useToast();
+  const {
+    myTeams: teams,
+    isLoading,
+    createTeam,
+    joinTeam,
+    getTeamMembers,
+    deleteTeam,
+    fetchMyTeams,
+  } = useTeams();
 
-  // Состояния для создания команды
-  const [teamName, setTeamName] = useState("");
-  const [teamDescription, setTeamDescription] = useState("");
-  const [teamTopic, setTeamTopic] = useState("");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [teamToDelete, setTeamToDelete] = useState<number | null>(null);
+  const [newTeamName, setNewTeamName] = useState("");
+  const [joinCode, setJoinCode] = useState("");
+  const [teamMembers, setTeamMembers] = useState<{
+    [key: number]: TeamMember[];
+  }>({});
+  const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
 
-  // Состояние для присоединения к команде
-  const [inviteCode, setInviteCode] = useState("");
-
-  // Состояние для отображения команды пользователя
-  const [myTeam, setMyTeam] = useState<Team | null>(null);
-  const [allTeams, setAllTeams] = useState<Team[]>([]);
-
-  // Состояния для работы с модальным окном для приглашения
-  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState("");
-
-  // Загрузка существующих команд из localStorage при инициализации
   useEffect(() => {
-    const teamsFromStorage = localStorage.getItem("teams");
-    if (teamsFromStorage) {
-      const parsedTeams = JSON.parse(teamsFromStorage);
-      setAllTeams(parsedTeams);
+    console.log("Current user:", user);
+    console.log("User roles:", user?.roles);
+    console.log("User role:", user?.role);
 
-      // Проверяем, является ли текущий пользователь членом какой-либо команды
-      if (user) {
-        const userTeam = parsedTeams.find((team: Team) =>
-          team.members.some((member: TeamMember) => member.id === user.id)
-        );
-
-        if (userTeam) {
-          setMyTeam(userTeam);
-          setActiveTab("my-team");
-        }
-      }
-    }
-  }, [user]);
-
-  // Функция для генерации уникального кода приглашения
-  const generateInviteCode = () => {
-    const characters =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    let result = "";
-    for (let i = 0; i < 6; i++) {
-      result += characters.charAt(
-        Math.floor(Math.random() * characters.length)
-      );
-    }
-    return result;
-  };
-
-  // Функция для создания новой команды
-  const handleCreateTeam = () => {
     if (!user) {
-      toast({
-        title: "Ошибка",
-        description: "Необходимо авторизоваться для создания команды",
-        variant: "destructive",
-      });
+      console.log("No user found");
       return;
     }
 
-    if (!teamName.trim()) {
+    const isStudent =
+      (user.roles && user.roles.includes("student")) || user.role === "student";
+
+    if (!isStudent) {
+      console.log("User is not a student");
+      toast({
+        title: "Доступ запрещен",
+        description: "Эта страница доступна только для студентов",
+        variant: "destructive",
+      });
+      router.push("/dashboard");
+      return;
+    }
+
+    console.log("User is a student, fetching teams");
+    fetchMyTeams();
+  }, [user, fetchMyTeams, router, toast]);
+
+  const handleShowMembers = async (teamId: number) => {
+    try {
+      const members = await getTeamMembers(teamId);
+      if (members) {
+        setTeamMembers((prev) => ({ ...prev, [teamId]: members }));
+        setSelectedTeam(teamId);
+      }
+    } catch (error) {
+      console.error("Error fetching team members:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить список участников",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteTeam = (teamId: number) => {
+    setTeamToDelete(teamId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleCreateTeam = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!newTeamName.trim()) {
       toast({
         title: "Ошибка",
         description: "Введите название команды",
@@ -130,536 +104,231 @@ export default function TeamsPage() {
       return;
     }
 
-    // Проверка, является ли пользователь уже членом команды
-    if (myTeam) {
+    try {
+      await createTeam(newTeamName);
+      setIsCreateDialogOpen(false);
+      setNewTeamName("");
+      await fetchMyTeams();
+      toast({
+        title: "Успешно",
+        description: "Команда успешно создана",
+      });
+    } catch (error) {
+      console.error("Error creating team:", error);
       toast({
         title: "Ошибка",
-        description: "Вы уже состоите в команде",
+        description: "Не удалось создать команду",
         variant: "destructive",
       });
-      return;
     }
-
-    // Создаем новую команду
-    const newTeam: Team = {
-      id: Date.now().toString(),
-      name: teamName,
-      description: teamDescription,
-      topic: teamTopic,
-      inviteCode: generateInviteCode(),
-      createdAt: new Date().toISOString(),
-      members: [
-        {
-          id: user.id,
-          name: user.name || "Пользователь",
-          role: "Владелец",
-          email: user.email,
-        },
-      ],
-      createdBy: user.id,
-    };
-
-    // Обновляем список всех команд
-    const updatedTeams = [...allTeams, newTeam];
-    localStorage.setItem("teams", JSON.stringify(updatedTeams));
-    setAllTeams(updatedTeams);
-    setMyTeam(newTeam);
-
-    // Сбрасываем поля формы
-    setTeamName("");
-    setTeamDescription("");
-    setTeamTopic("");
-
-    // Переключаемся на вкладку "Моя команда"
-    setActiveTab("my-team");
-
-    toast({
-      title: "Успех",
-      description: "Команда успешно создана",
-    });
   };
 
-  // Функция для присоединения к команде по коду приглашения
-  const handleJoinTeam = () => {
-    if (!user) {
+  const handleJoinTeam = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!joinCode.trim()) {
       toast({
         title: "Ошибка",
-        description: "Необходимо авторизоваться для присоединения к команде",
+        description: "Введите код команды",
         variant: "destructive",
       });
       return;
     }
 
-    if (!inviteCode.trim()) {
+    try {
+      await joinTeam(joinCode);
+      setIsJoinDialogOpen(false);
+      setJoinCode("");
+      await fetchMyTeams();
+      toast({
+        title: "Успешно",
+        description: "Вы успешно присоединились к команде",
+      });
+    } catch (error) {
+      console.error("Error joining team:", error);
       toast({
         title: "Ошибка",
-        description: "Введите код приглашения",
+        description: "Не удалось присоединиться к команде",
         variant: "destructive",
       });
-      return;
     }
-
-    // Проверка, является ли пользователь уже членом команды
-    if (myTeam) {
-      toast({
-        title: "Ошибка",
-        description: "Вы уже состоите в команде",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Ищем команду по коду приглашения
-    const foundTeam = allTeams.find((team) => team.inviteCode === inviteCode);
-
-    if (!foundTeam) {
-      toast({
-        title: "Ошибка",
-        description: "Команда с указанным кодом не найдена",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Проверяем, не состоит ли пользователь уже в этой команде
-    if (foundTeam.members.some((member) => member.id === user.id)) {
-      toast({
-        title: "Информация",
-        description: "Вы уже являетесь членом этой команды",
-      });
-      setMyTeam(foundTeam);
-      setActiveTab("my-team");
-      return;
-    }
-
-    // Добавляем пользователя в команду
-    const newMember: TeamMember = {
-      id: user.id,
-      name: user.name || "Пользователь",
-      role: "Участник",
-      email: user.email,
-    };
-
-    const updatedTeam = {
-      ...foundTeam,
-      members: [...foundTeam.members, newMember],
-    };
-
-    // Обновляем список всех команд
-    const updatedTeams = allTeams.map((team) =>
-      team.id === updatedTeam.id ? updatedTeam : team
-    );
-
-    localStorage.setItem("teams", JSON.stringify(updatedTeams));
-    setAllTeams(updatedTeams);
-    setMyTeam(updatedTeam);
-    setInviteCode("");
-    setActiveTab("my-team");
-
-    toast({
-      title: "Успех",
-      description: "Вы успешно присоединились к команде",
-    });
   };
 
-  // Функция для выхода из команды
-  const handleLeaveTeam = () => {
-    if (!user || !myTeam) {
-      return;
-    }
+  const handleConfirmDelete = async () => {
+    if (!teamToDelete) return;
 
-    // Проверяем, является ли пользователь создателем команды
-    if (myTeam.createdBy === user.id) {
-      if (myTeam.members.length > 1) {
-        toast({
-          title: "Ошибка",
-          description:
-            "Вы не можете покинуть созданную вами команду, пока в ней есть другие участники",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Если пользователь - единственный член и создатель команды, удаляем команду
-      const updatedTeams = allTeams.filter((team) => team.id !== myTeam.id);
-      localStorage.setItem("teams", JSON.stringify(updatedTeams));
-      setAllTeams(updatedTeams);
-      setMyTeam(null);
-
+    try {
+      await deleteTeam(teamToDelete);
+      setIsDeleteDialogOpen(false);
+      setTeamToDelete(null);
+      await fetchMyTeams();
       toast({
-        title: "Информация",
-        description:
-          "Команда была удалена, так как вы были единственным участником",
+        title: "Успешно",
+        description: "Команда успешно удалена",
       });
-      return;
-    }
-
-    // Удаляем пользователя из членов команды
-    const updatedMembers = myTeam.members.filter(
-      (member) => member.id !== user.id
-    );
-    const updatedTeam = { ...myTeam, members: updatedMembers };
-
-    // Обновляем список всех команд
-    const updatedTeams = allTeams.map((team) =>
-      team.id === myTeam.id ? updatedTeam : team
-    );
-
-    localStorage.setItem("teams", JSON.stringify(updatedTeams));
-    setAllTeams(updatedTeams);
-    setMyTeam(null);
-
-    toast({
-      title: "Информация",
-      description: "Вы покинули команду",
-    });
-  };
-
-  // Функция для приглашения нового участника
-  const handleInviteMember = () => {
-    if (!myTeam || !inviteEmail.trim() || !inviteRole.trim()) {
+    } catch (error) {
+      console.error("Error deleting team:", error);
       toast({
         title: "Ошибка",
-        description: "Заполните все поля",
+        description: "Не удалось удалить команду",
         variant: "destructive",
       });
-      return;
     }
-
-    // В реальном приложении здесь был бы запрос к API
-    // Сейчас просто показываем сообщение с кодом приглашения
-
-    toast({
-      title: "Приглашение отправлено",
-      description: `Отправлено приглашение на email: ${inviteEmail}. Код приглашения: ${myTeam.inviteCode}`,
-    });
-
-    setIsInviteDialogOpen(false);
-    setInviteEmail("");
-    setInviteRole("");
   };
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
-    <div className="space-y-6 p-3 xxs:p-4 sm:p-6">
-      <div>
-        <h1 className="text-xl xxs:text-2xl md:text-3xl font-bold tracking-tight">
-          Команды
-        </h1>
-        <p className="text-xs xxs:text-sm md:text-base text-gray-600">
-          Создание и управление командами для дипломных проектов
-        </p>
-      </div>
-
-      <div className="w-full overflow-hidden">
-        <Tabs
-          defaultValue="join"
-          className="w-full"
-          value={activeTab}
-          onValueChange={setActiveTab}
-        >
-          <div className="overflow-x-auto pb-2">
-            <TabsList className="w-full sm:w-auto">
-              <TabsTrigger
-                value="join"
-                className="flex-1 sm:flex-none text-xs xxs:text-sm"
-                disabled={!!myTeam}
-              >
-                Присоединиться
-              </TabsTrigger>
-              <TabsTrigger
-                value="create"
-                className="flex-1 sm:flex-none text-xs xxs:text-sm"
-                disabled={!!myTeam}
-              >
+    <div className="container mx-auto py-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Моя команда</h1>
+        <div className="space-x-4">
+          {!teams.length && (
+            <>
+              <Button onClick={() => setIsCreateDialogOpen(true)}>
                 Создать команду
-              </TabsTrigger>
-              <TabsTrigger
-                value="my-team"
-                className="flex-1 sm:flex-none text-xs xxs:text-sm"
+              </Button>
+              <Button
+                onClick={() => setIsJoinDialogOpen(true)}
+                variant="outline"
               >
-                Моя команда
-              </TabsTrigger>
-            </TabsList>
-          </div>
-
-          <TabsContent value="join" className="mt-3 xxs:mt-4">
-            <Card>
-              <CardHeader className="p-3 xxs:p-4 sm:p-6">
-                <CardTitle className="text-base xxs:text-lg sm:text-xl">
-                  Присоединиться к команде
-                </CardTitle>
-                <CardDescription className="text-xs xxs:text-sm">
-                  Введите код приглашения, чтобы присоединиться к существующей
-                  команде
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3 xxs:space-y-4 p-3 xxs:p-4 sm:p-6 pt-0 xxs:pt-0 sm:pt-0">
-                <div className="space-y-2">
-                  <Label htmlFor="team-code" className="text-xs xxs:text-sm">
-                    Код команды
-                  </Label>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <Input
-                      id="team-code"
-                      placeholder="Например: ABC123"
-                      className="flex-1"
-                      value={inviteCode}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        setInviteCode(e.target.value)
-                      }
-                    />
-                    <Button
-                      onClick={handleJoinTeam}
-                      className="w-full sm:w-auto mt-2 sm:mt-0 text-xs xxs:text-sm h-8 xxs:h-10"
-                    >
-                      <UserPlus className="mr-2 h-3 w-3 xxs:h-4 xxs:w-4" />
-                      Присоединиться
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="create" className="mt-3 xxs:mt-4">
-            <Card>
-              <CardHeader className="p-3 xxs:p-4 sm:p-6">
-                <CardTitle className="text-base xxs:text-lg sm:text-xl">
-                  Создать новую команду
-                </CardTitle>
-                <CardDescription className="text-xs xxs:text-sm">
-                  Создайте команду и пригласите участников для работы над
-                  дипломом
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3 xxs:space-y-4 p-3 xxs:p-4 sm:p-6 pt-0 xxs:pt-0 sm:pt-0">
-                <div className="space-y-2">
-                  <Label htmlFor="team-name" className="text-xs xxs:text-sm">
-                    Название команды*
-                  </Label>
-                  <Input
-                    id="team-name"
-                    placeholder="Введите название команды"
-                    value={teamName}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setTeamName(e.target.value)
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="team-topic" className="text-xs xxs:text-sm">
-                    Тема проекта
-                  </Label>
-                  <Input
-                    id="team-topic"
-                    placeholder="Тема дипломного проекта"
-                    value={teamTopic}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setTeamTopic(e.target.value)
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="team-description"
-                    className="text-xs xxs:text-sm"
-                  >
-                    Описание
-                  </Label>
-                  <Textarea
-                    id="team-description"
-                    placeholder="Краткое описание команды и проекта"
-                    value={teamDescription}
-                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                      setTeamDescription(e.target.value)
-                    }
-                    className="min-h-[100px]"
-                  />
-                </div>
-                <div className="pt-3 xxs:pt-4">
-                  <Button
-                    onClick={handleCreateTeam}
-                    className="w-full sm:w-auto text-xs xxs:text-sm h-8 xxs:h-10"
-                  >
-                    <Users className="mr-2 h-3 w-3 xxs:h-4 xxs:w-4" />
-                    Создать команду
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="my-team" className="mt-3 xxs:mt-4">
-            {myTeam ? (
-              <Card>
-                <CardHeader className="p-3 xxs:p-4 sm:p-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                    <div>
-                      <CardTitle className="text-base xxs:text-lg sm:text-xl">
-                        {myTeam.name}
-                      </CardTitle>
-                      <CardDescription className="text-xs xxs:text-sm">
-                        {myTeam.topic
-                          ? myTeam.topic
-                          : "Тема проекта не указана"}
-                      </CardDescription>
-                    </div>
-                    <Badge variant="outline" className="w-fit">
-                      Код приглашения: {myTeam.inviteCode}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4 p-3 xxs:p-4 sm:p-6 pt-0 xxs:pt-0 sm:pt-0">
-                  {myTeam.description && (
-                    <div>
-                      <h3 className="text-sm font-medium mb-1">Описание:</h3>
-                      <p className="text-sm text-gray-600">
-                        {myTeam.description}
-                      </p>
-                    </div>
-                  )}
-
-                  <div>
-                    <h3 className="text-sm font-medium mb-2">
-                      Участники команды:
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {myTeam.members.map((member) => (
-                        <div
-                          key={member.id}
-                          className="flex items-center p-2 border rounded-md"
-                        >
-                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center mr-2">
-                            <User className="h-4 w-4 text-primary" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">
-                              {member.name}
-                            </p>
-                            <p className="text-xs text-gray-500 truncate">
-                              {member.role}
-                            </p>
-                          </div>
-                          {member.id === myTeam.createdBy && (
-                            <Badge className="ml-2" variant="secondary">
-                              Владелец
-                            </Badge>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter className="flex flex-col sm:flex-row gap-2 justify-between p-3 xxs:p-4 sm:p-6">
-                  <Dialog
-                    open={isInviteDialogOpen}
-                    onOpenChange={setIsInviteDialogOpen}
-                  >
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full sm:w-auto text-xs xxs:text-sm h-8 xxs:h-10"
-                      >
-                        <UserPlus2 className="mr-2 h-3 w-3 xxs:h-4 xxs:w-4" />
-                        Пригласить участника
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px]">
-                      <DialogHeader>
-                        <DialogTitle>Пригласить участника</DialogTitle>
-                        <DialogDescription>
-                          Отправьте приглашение новому участнику команды
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="invite-email" className="text-right">
-                            Email
-                          </Label>
-                          <Input
-                            id="invite-email"
-                            type="email"
-                            placeholder="email@example.com"
-                            className="col-span-3"
-                            value={inviteEmail}
-                            onChange={(
-                              e: React.ChangeEvent<HTMLInputElement>
-                            ) => setInviteEmail(e.target.value)}
-                          />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="invite-role" className="text-right">
-                            Роль
-                          </Label>
-                          <Input
-                            id="invite-role"
-                            placeholder="Разработчик, Дизайнер и т.д."
-                            className="col-span-3"
-                            value={inviteRole}
-                            onChange={(
-                              e: React.ChangeEvent<HTMLInputElement>
-                            ) => setInviteRole(e.target.value)}
-                          />
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button type="button" onClick={handleInviteMember}>
-                          Отправить приглашение
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-
-                  <Button
-                    variant="destructive"
-                    className="w-full sm:w-auto text-xs xxs:text-sm h-8 xxs:h-10"
-                    onClick={handleLeaveTeam}
-                  >
-                    <X className="mr-2 h-3 w-3 xxs:h-4 xxs:w-4" />
-                    {myTeam.createdBy === user?.id
-                      ? "Удалить команду"
-                      : "Покинуть команду"}
-                  </Button>
-                </CardFooter>
-              </Card>
-            ) : (
-              <Card>
-                <CardHeader className="p-3 xxs:p-4 sm:p-6">
-                  <CardTitle className="text-base xxs:text-lg sm:text-xl">
-                    Моя команда
-                  </CardTitle>
-                  <CardDescription className="text-xs xxs:text-sm">
-                    У вас пока нет команды
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-col items-center justify-center py-4 xxs:py-6 sm:py-8 px-3 xxs:px-4 sm:px-6">
-                  <Users className="h-12 w-12 xxs:h-16 xxs:w-16 text-gray-300 mb-3 xxs:mb-4" />
-                  <p className="text-center text-gray-600 max-w-md text-xs xxs:text-sm">
-                    Присоединитесь к команде или создайте свою для совместной
-                    работы над дипломным проектом
-                  </p>
-                </CardContent>
-                <CardFooter className="flex flex-col sm:flex-row gap-2 xxs:gap-3 justify-center sm:justify-between p-3 xxs:p-4 sm:p-6">
-                  <Button
-                    variant="outline"
-                    onClick={() => setActiveTab("join")}
-                    className="w-full sm:w-auto text-xs xxs:text-sm h-8 xxs:h-10"
-                  >
-                    Присоединиться к команде
-                  </Button>
-                  <Button
-                    onClick={() => setActiveTab("create")}
-                    className="w-full sm:w-auto text-xs xxs:text-sm h-8 xxs:h-10"
-                  >
-                    Создать команду
-                  </Button>
-                </CardFooter>
-              </Card>
-            )}
-          </TabsContent>
-        </Tabs>
+                Присоединиться к команде
+              </Button>
+            </>
+          )}
+        </div>
       </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {teams.map((team) => (
+          <div
+            key={team.id}
+            className="bg-white shadow rounded-lg p-6 space-y-4"
+          >
+            <div className="flex justify-between items-start">
+              <div>
+                <h2 className="text-xl font-semibold">{team.name}</h2>
+                <p className="text-gray-500">Код: {team.code}</p>
+                <p className="text-gray-500">
+                  Участников: {team.members?.length || 0}
+                </p>
+              </div>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => handleDeleteTeam(team.id)}
+              >
+                Удалить
+              </Button>
+            </div>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => handleShowMembers(team.id)}
+            >
+              {selectedTeam === team.id
+                ? "Скрыть участников"
+                : "Показать участников"}
+            </Button>
+            {selectedTeam === team.id && teamMembers[team.id] && (
+              <div className="mt-4">
+                <h3 className="font-semibold mb-2">Участники команды:</h3>
+                <ul className="space-y-2">
+                  {teamMembers[team.id].map((member) => (
+                    <li
+                      key={member.id}
+                      className="flex flex-col space-y-1 border-b pb-2"
+                    >
+                      <div className="flex justify-between items-center">
+                        <div className="flex flex-col">
+                          <span className="font-medium">{member.fullname}</span>
+                          <span className="text-sm text-muted-foreground">
+                            {member.email}
+                          </span>
+                        </div>
+                        <span className="text-sm px-2 py-1 bg-secondary rounded-md">
+                          {member.role === "creator" ? "Создатель" : "Участник"}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Создать команду</DialogTitle>
+            <DialogDescription>
+              Введите название для новой команды
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreateTeam}>
+            <div className="space-y-4">
+              <Input
+                placeholder="Название команды"
+                value={newTeamName}
+                onChange={(e) => setNewTeamName(e.target.value)}
+              />
+            </div>
+            <DialogFooter className="mt-4">
+              <Button type="submit">Создать</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isJoinDialogOpen} onOpenChange={setIsJoinDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Присоединиться к команде</DialogTitle>
+            <DialogDescription>
+              Введите код команды для присоединения
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleJoinTeam}>
+            <div className="space-y-4">
+              <Input
+                placeholder="Код команды"
+                value={joinCode}
+                onChange={(e) => setJoinCode(e.target.value)}
+              />
+            </div>
+            <DialogFooter className="mt-4">
+              <Button type="submit">Присоединиться</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Удалить команду</DialogTitle>
+            <DialogDescription>
+              Вы уверены, что хотите удалить эту команду? Это действие нельзя
+              отменить.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+            >
+              Отмена
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDelete}>
+              Удалить
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

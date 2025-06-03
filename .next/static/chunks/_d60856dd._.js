@@ -1336,7 +1336,7 @@ function useComposedRefs(...refs) {
 
 var { g: global, __dirname } = __turbopack_context__;
 {
-// packages/react/slot/src/slot.tsx
+// src/slot.tsx
 __turbopack_context__.s({
     "Root": (()=>Slot),
     "Slot": (()=>Slot),
@@ -1427,8 +1427,9 @@ function mergeProps(slotProps, childProps) {
         if (isHandler) {
             if (slotPropValue && childPropValue) {
                 overrideProps[propName] = (...args)=>{
-                    childPropValue(...args);
+                    const result = childPropValue(...args);
                     slotPropValue(...args);
+                    return result;
                 };
             } else if (slotPropValue) {
                 overrideProps[propName] = slotPropValue;

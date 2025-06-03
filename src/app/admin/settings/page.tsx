@@ -22,7 +22,7 @@ export default function AdminSettingsPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   // Общие настройки
-  const [siteName, setSiteName] = useState("Диплом.Платформа");
+  const [siteName, setSiteName] = useState("DiploMate");
   const [siteDescription, setSiteDescription] = useState(
     "Цифровое сопровождение дипломных работ"
   );
@@ -34,7 +34,7 @@ export default function AdminSettingsPage() {
   const [smtpUser, setSmtpUser] = useState("no-reply@example.com");
   const [smtpPassword, setSmtpPassword] = useState("");
   const [emailFrom, setEmailFrom] = useState(
-    "Диплом.Платформа <no-reply@example.com>"
+    "DiploMate <no-reply@example.com>"
   );
 
   // Настройки пользователей
