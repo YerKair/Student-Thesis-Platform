@@ -1,6 +1,6 @@
 import { API_URL } from "@/shared/config";
 
-export interface User {
+export interface BackendUser {
   id: number;
   email: string;
   fullname: string;
@@ -28,7 +28,7 @@ export interface ApiResponse<T> {
 export class UserService {
   static async registerAdmin(
     data: RegisterAdminRequest
-  ): Promise<ApiResponse<User>> {
+  ): Promise<ApiResponse<BackendUser>> {
     try {
       const response = await fetch(`${API_URL}/auth/register/admin`, {
         method: "POST",
@@ -56,7 +56,7 @@ export class UserService {
     userId: number,
     role: AddRoleRequest,
     token: string
-  ): Promise<ApiResponse<User>> {
+  ): Promise<ApiResponse<BackendUser>> {
     try {
       const response = await fetch(`${API_URL}/users/${userId}/roles`, {
         method: "POST",
@@ -81,7 +81,7 @@ export class UserService {
     }
   }
 
-  static async getUsers(token: string): Promise<User[]> {
+  static async getUsers(token: string): Promise<BackendUser[]> {
     try {
       const response = await fetch(`${API_URL}/users`, {
         headers: {

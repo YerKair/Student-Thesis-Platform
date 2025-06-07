@@ -1,273 +1,469 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Stage } from "@/features/projects/components/Stage";
-import { CreateProject } from "@/features/projects/components/CreateProject";
-import { TeamProjectsService } from "@/features/projects/api/team-projects.service";
-import { TeamsService } from "@/features/teams/api/teams-service";
-import { useToast } from "@/shared/ui/use-toast";
-import { Progress } from "@/shared/ui/progress";
-import { Project } from "@/entities/project/model/types";
-import { Team } from "@/entities/team/model/types";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
+import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
+import { CreateProject } from "@/features/projects/components/CreateProject";
+import { ProjectDeadlines } from "@/features/projects/components/ProjectDeadlines";
+import { ProjectsService } from "@/entities/project/api/projectsService";
+import { ProjectWithDeadlines } from "@/entities/project/model/types";
 import { useAuthContext } from "@/app/providers/auth-provider";
-import { Card } from "@/shared/ui/card";
-import { AlertCircle } from "lucide-react";
+import { api, ProjectStageStatus } from "@/lib/api";
+import {
+  Calendar,
+  Users,
+  FileText,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  XCircle,
+  Loader,
+  RefreshCw,
+} from "lucide-react";
 
-interface ThesisStage {
+interface TeamMember {
   id: number;
-  title: string;
-  description: string;
-  deadline: string;
-  status: "completed" | "in_progress" | "waiting";
-  supervisorComment?: string;
+  fullname: string;
+  email: string;
+  role?: string;
 }
 
-export default function ThesisPage() {
-  const [project, setProject] = useState<Project | null>(null);
-  const [team, setTeam] = useState<Team | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const { toast } = useToast();
-  const router = useRouter();
-  const { token } = useAuthContext();
+interface Team {
+  id: number;
+  name: string;
+  project_id?: number;
+  members: TeamMember[];
+}
 
-  const [stages] = useState<ThesisStage[]>([
-    {
-      id: 1,
-      title: "Первая преддзащита",
-      description: "Загрузите план-график и предварительный план работы.",
-      deadline: "2024-04-12",
-      status: "completed",
-      supervisorComment:
-        "Хорошая подготовка и четкое понимание целей исследования. Рекомендую больше внимания уделить методологии.",
-    },
-    {
-      id: 2,
-      title: "Вторая преддзащита",
-      description:
-        "Презентация первых результатов исследования и черновой версии теоретической части работы. Загрузите черновик первой главы и презентацию.",
-      deadline: "2024-04-26",
-      status: "in_progress",
-    },
-    {
-      id: 3,
-      title: "Преддипломная практика",
-      description:
-        "Прохождение преддипломной практики и подготовка соответствующей документации.",
-      deadline: "2024-05-21",
-      status: "waiting",
-    },
-    {
-      id: 4,
-      title: "Финальная версия дипломной работы",
-      description:
-        "Загрузка финальной версии дипломной работы и всех необходимых документов.",
-      deadline: "2024-06-11",
-      status: "waiting",
-    },
-  ]);
+const statusNames = {
+  waiting: "Ожидание",
+  in_progress: "В процессе",
+  completed: "Завершен",
+  failed: "Провален",
+};
+
+const getStatusIcon = (status: string) => {
+  switch (status) {
+    case "waiting":
+      return <Clock className="h-4 w-4" />;
+    case "in_progress":
+      return <Loader className="h-4 w-4" />;
+    case "completed":
+      return <CheckCircle className="h-4 w-4" />;
+    case "failed":
+      return <XCircle className="h-4 w-4" />;
+    default:
+      return <AlertCircle className="h-4 w-4" />;
+  }
+};
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case "waiting":
+      return "bg-gray-100 text-gray-800";
+    case "in_progress":
+      return "bg-blue-100 text-blue-800";
+    case "completed":
+      return "bg-green-100 text-green-800";
+    case "failed":
+      return "bg-red-100 text-red-800";
+    default:
+      return "bg-gray-100 text-gray-800";
+  }
+};
+
+export default function ThesisPage() {
+  const router = useRouter();
+  const {
+    user,
+    token,
+    isAuthenticated,
+    isLoading: authLoading,
+  } = useAuthContext();
+  const [team, setTeam] = useState<Team | null>(null);
+  const [projectWithDeadlines, setProjectWithDeadlines] =
+    useState<ProjectWithDeadlines | null>(null);
+  const [stageStatuses, setStageStatuses] = useState<ProjectStageStatus[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const loadTeamAndProject = async () => {
-    if (!token) {
-      toast({
-        title: "Ошибка",
-        description: "Необходима авторизация",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
-      setIsLoading(true);
+      setLoading(true);
+      setError(null);
 
-      // Получаем список команд пользователя
-      const teams = await TeamsService.getMyTeams(token);
-
-      // Если у пользователя нет команд, перенаправляем на страницу создания команды
-      if (teams.length === 0) {
-        router.push("/dashboard/teams/create");
-        return;
+      if (!token) {
+        throw new Error("Токен авторизации не найден");
       }
 
-      // Берем первую команду (в будущем можно добавить выбор команды)
-      const team = teams[0];
-      setTeam(team);
-
-      // Проверяем наличие руководителя
-      if (!team.supervisor_id) {
-        setIsLoading(false);
-        return;
-      }
-
-      // Получаем проект команды
-      const project = await TeamProjectsService.getTeamProject(team.id);
-      setProject(project);
-    } catch (error) {
-      toast({
-        title: "Ошибка",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Не удалось загрузить данные",
-        variant: "destructive",
+      // Загружаем команду
+      const teamResponse = await fetch("/api/teams/my-team", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
+
+      if (teamResponse.ok) {
+        const teamData = await teamResponse.json();
+        setTeam(teamData);
+
+        // Если у команды есть проект, загружаем его с дедлайнами и статусами
+        if (teamData.project_id) {
+          try {
+            const projectData = await ProjectsService.getProjectWithDeadlines(
+              token,
+              teamData.project_id
+            );
+            setProjectWithDeadlines(projectData);
+
+            // Загружаем статусы этапов
+            try {
+              const statuses = await api.reviews.getProjectStageStatuses(
+                token,
+                teamData.project_id
+              );
+              setStageStatuses(statuses);
+            } catch (statusError) {
+              console.error(
+                "Ошибка при загрузке статусов этапов:",
+                statusError
+              );
+              // Пытаемся инициализировать статусы, если их нет
+              try {
+                await api.reviews.initializeProjectStages(
+                  token,
+                  teamData.project_id
+                );
+                const statuses = await api.reviews.getProjectStageStatuses(
+                  token,
+                  teamData.project_id
+                );
+                setStageStatuses(statuses);
+              } catch (initError) {
+                console.error("Ошибка при инициализации статусов:", initError);
+              }
+            }
+          } catch (error) {
+            console.error("Ошибка при загрузке проекта:", error);
+            // Не показываем ошибку пользователю, так как проект может не существовать
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Ошибка при загрузке данных:", error);
+      setError("Ошибка при загрузке данных");
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadTeamAndProject();
-  }, [token]);
+    // Проверяем авторизацию
+    if (!authLoading && !isAuthenticated) {
+      router.push("/auth/login");
+      return;
+    }
 
-  // Получение прогресса выполнения диплома
-  const getOverallProgress = () => {
-    const completedStages = stages.filter(
-      (stage) => stage.status === "completed"
-    ).length;
-    return (completedStages / stages.length) * 100;
+    // Загружаем данные только если пользователь авторизован
+    if (isAuthenticated && token) {
+      loadTeamAndProject();
+    }
+  }, [isAuthenticated, token, authLoading, router]);
+
+  // Автоматическое обновление статусов этапов каждые 30 секунд
+  useEffect(() => {
+    if (!isAuthenticated || !token || !team?.project_id) {
+      return;
+    }
+
+    const projectId = team.project_id;
+    if (!projectId) return;
+
+    const interval = setInterval(async () => {
+      try {
+        // Обновляем только статусы этапов, не весь проект
+        const statuses = await api.reviews.getProjectStageStatuses(
+          token,
+          projectId
+        );
+        setStageStatuses(statuses);
+      } catch (error) {
+        console.error("Ошибка при автоматическом обновлении статусов:", error);
+      }
+    }, 30000); // 30 секунд
+
+    return () => clearInterval(interval);
+  }, [isAuthenticated, token, team?.project_id]);
+
+  const onProjectCreated = async (projectData: any) => {
+    // Обновляем команду
+    await loadTeamAndProject();
+
+    // Инициализируем статусы этапов для нового проекта
+    try {
+      if (token) {
+        await api.reviews.initializeProjectStages(token, projectData.id);
+        // Перезагружаем данные проекта после инициализации
+        const updatedProjectData =
+          await ProjectsService.getProjectWithDeadlines(token, projectData.id);
+        setProjectWithDeadlines(updatedProjectData);
+
+        // Загружаем статусы этапов
+        const statuses = await api.reviews.getProjectStageStatuses(
+          token,
+          projectData.id
+        );
+        setStageStatuses(statuses);
+      }
+    } catch (error) {
+      console.error("Ошибка при инициализации статусов этапов:", error);
+    }
   };
 
-  if (isLoading) {
-    return <div>Loading...</div>;
+  const refreshStageStatuses = async () => {
+    if (!token || !team?.project_id) return;
+
+    try {
+      setRefreshing(true);
+      const statuses = await api.reviews.getProjectStageStatuses(
+        token,
+        team.project_id
+      );
+      setStageStatuses(statuses);
+    } catch (error) {
+      console.error("Ошибка при обновлении статусов:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Показываем загрузку пока проверяется авторизация
+  if (authLoading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <Loader className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p>Проверка авторизации...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Если не авторизован, ничего не показываем (произойдет редирект)
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  if (loading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <Loader className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p>Загрузка...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center text-red-600">
+              <AlertCircle className="h-8 w-8 mx-auto mb-4" />
+              <p>{error}</p>
+              <Button onClick={loadTeamAndProject} className="mt-4">
+                Попробовать снова
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   if (!team) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <h2 className="text-xl font-bold mb-4">У вас нет команды</h2>
-        <p className="text-gray-600 mb-6">
-          Для работы над дипломным проектом необходимо создать или
-          присоединиться к команде
-        </p>
-        <Button onClick={() => router.push("/dashboard/teams/create")}>
-          Создать команду
-        </Button>
-      </div>
-    );
-  }
-
-  if (!team.supervisor_id) {
-    return (
-      <div className="container mx-auto py-6">
-        <Card className="mb-6 p-6 border-yellow-500 bg-yellow-50">
-          <div className="flex items-start space-x-4">
-            <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
-            <div>
-              <h3 className="font-medium text-yellow-900">Нет руководителя</h3>
-              <p className="text-yellow-800 mt-1">
-                Для начала работы над дипломным проектом необходимо, чтобы у
-                вашей команды был назначен руководитель. Дождитесь, пока
-                преподаватель возьмет вашу команду на руководство.
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center">
+              <Users className="h-8 w-8 mx-auto mb-4 text-gray-400" />
+              <h3 className="text-lg font-semibold mb-2">Команда не найдена</h3>
+              <p className="text-gray-600">
+                Вы не состоите в команде. Обратитесь к администратору для
+                добавления в команду.
               </p>
             </div>
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <h2 className="text-xl font-bold mb-4">Информация о команде</h2>
-          <div className="grid gap-4">
-            <div>
-              <h3 className="font-medium mb-2">Название команды</h3>
-              <p className="text-gray-600">{team.name}</p>
-            </div>
-            <div>
-              <h3 className="font-medium mb-2">Код команды</h3>
-              <p className="font-mono bg-muted p-2 rounded">{team.code}</p>
-            </div>
-            <div>
-              <h3 className="font-medium mb-2">Участники</h3>
-              <div className="space-y-2">
-                {team.members.map((member) => (
-                  <div
-                    key={member.id}
-                    className="flex items-center justify-between border rounded-md p-3"
-                  >
-                    <div className="flex flex-col">
-                      <span className="font-medium">{member.fullname}</span>
-                      <span className="text-sm text-muted-foreground">
-                        {member.email}
-                      </span>
-                    </div>
-                    <span className="text-sm px-2 py-1 bg-secondary rounded-md">
-                      {member.role === "creator" ? "Создатель" : "Участник"}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          </CardContent>
         </Card>
       </div>
     );
   }
 
-  if (!project) {
-    return (
-      <CreateProject
-        teamId={team.id}
-        onProjectCreated={(newProject) => {
-          setProject(newProject);
-        }}
-      />
-    );
-  }
+  const project = projectWithDeadlines;
+
+  // Вычисляем прогресс на основе статусов этапов
+  const calculateProgress = () => {
+    if (!stageStatuses || stageStatuses.length === 0) {
+      return 0;
+    }
+
+    const completedStages = stageStatuses.filter(
+      (status) => status.status === "completed"
+    ).length;
+    return Math.round((completedStages / 4) * 100); // 4 этапа всего
+  };
 
   return (
-    <div className="container mx-auto py-6 px-4">
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold mb-2">Дипломная работа</h1>
-            <p className="text-gray-600">
-              Отслеживайте прогресс вашей дипломной работы и загружайте
-              необходимые файлы на каждом этапе.
-            </p>
-          </div>
-          <div className="text-right">
-            <div className="text-sm text-gray-500 mb-2">Общий прогресс</div>
-            <Progress value={getOverallProgress()} className="w-[200px]" />
-          </div>
-        </div>
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Дипломная работа</h1>
+        <Badge variant="outline" className="text-sm">
+          Команда: {team.name}
+        </Badge>
       </div>
 
-      <div className="space-y-4">
-        {stages.map((stage) => (
-          <Stage
-            key={stage.id}
-            projectId={project.id}
-            title={stage.title}
-            description={stage.description}
-            deadline={stage.deadline}
-            status={stage.status}
-            supervisorComment={stage.supervisorComment}
-            defaultExpanded={stage.status === "in_progress"}
-          />
-        ))}
-      </div>
+      {/* Информация о команде */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Команда
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {team.members.map((member) => (
+              <div
+                key={member.id}
+                className="flex items-center justify-between p-2 bg-gray-50 rounded"
+              >
+                <div>
+                  <p className="font-medium">{member.fullname}</p>
+                  <p className="text-sm text-gray-600">{member.email}</p>
+                </div>
+                {member.role && (
+                  <Badge variant="secondary">{member.role}</Badge>
+                )}
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-      <div className="mt-8 bg-white rounded-lg p-6 border">
-        <h2 className="text-xl font-bold mb-4">
-          Информация о дипломной работе
-        </h2>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <h3 className="font-medium mb-2">Тема</h3>
-            <p className="text-gray-600">{project.name}</p>
-          </div>
-          <div>
-            <h3 className="font-medium mb-2">Команда</h3>
-            <p className="text-gray-600">{team.name}</p>
-          </div>
-          {project.description && (
-            <div className="col-span-2">
-              <h3 className="font-medium mb-2">Описание</h3>
-              <p className="text-gray-600">{project.description}</p>
-            </div>
-          )}
+      {/* Проект */}
+      {project ? (
+        <div className="space-y-6">
+          {/* Информация о проекте */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                {project.name}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {project.description && (
+                <p className="text-gray-600 mb-4">{project.description}</p>
+              )}
+
+              {/* Прогресс проекта */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">Прогресс проекта</span>
+                  <span className="text-sm text-gray-600">
+                    {calculateProgress()}%
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${calculateProgress()}%` }}
+                  ></div>
+                </div>
+              </div>
+
+              {/* Краткая информация о статусах этапов */}
+              {stageStatuses && stageStatuses.length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {stageStatuses.map((status) => (
+                    <div
+                      key={status.stage}
+                      className="text-center p-3 bg-gray-50 rounded-lg"
+                    >
+                      <div className="flex items-center justify-center mb-2">
+                        {getStatusIcon(status.status)}
+                      </div>
+                      <p className="text-xs font-medium text-gray-600 mb-1">
+                        {status.stage === "initial"
+                          ? "Начальный"
+                          : status.stage === "technical"
+                          ? "Технический"
+                          : status.stage === "methodological"
+                          ? "Методологический"
+                          : "Финальный"}
+                      </p>
+                      <Badge
+                        className={getStatusColor(status.status)}
+                        variant="secondary"
+                      >
+                        {statusNames[status.status]}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="text-sm text-gray-500 mt-4">
+                Создан:{" "}
+                {new Date(project.created_at).toLocaleDateString("ru-RU")}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Дедлайны и статусы этапов */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Этапы проекта
+                </CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={refreshStageStatuses}
+                  disabled={refreshing}
+                  className="flex items-center gap-2"
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+                  />
+                  {refreshing ? "Обновление..." : "Обновить статусы"}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <ProjectDeadlines
+                deadlines={project.deadlines}
+                stageStatuses={stageStatuses}
+                projectId={project.id}
+              />
+            </CardContent>
+          </Card>
         </div>
-      </div>
+      ) : (
+        <CreateProject teamId={team.id} onProjectCreated={onProjectCreated} />
+      )}
     </div>
   );
 }

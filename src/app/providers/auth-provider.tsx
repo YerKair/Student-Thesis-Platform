@@ -1,36 +1,36 @@
 "use client";
 
-import React, { createContext, ReactNode, useContext } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { useAuth } from "@/features/auth/lib/use-auth";
-import { AuthState } from "@/features/auth/model/types";
-import {
-  LoginFormValues,
-  RegisterFormValues,
-} from "@/features/auth/model/schema";
-import { User } from "@/entities/user/model/types";
+import { AuthContextType } from "@/features/auth/model/types";
 
-interface AuthContextType extends AuthState {
-  login: (
-    data: LoginFormValues
-  ) => Promise<{ user: User; token: string; refreshToken: string }>;
-  register: (
-    data: RegisterFormValues
-  ) => Promise<{ user: User; token: string; refreshToken: string }>;
-  logout: () => void;
-}
+const AuthContext = createContext<AuthContextType | null>(null);
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false);
   const auth = useAuth();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-32 w-32 animate-spin rounded-full border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
 
   return <AuthContext.Provider value={auth}>{children}</AuthContext.Provider>;
 }
 
-export const useAuthContext = () => {
+export function useAuthContext() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuthContext must be used within an AuthProvider");
+
+  if (!context) {
+    throw new Error("useAuthContext must be used within AuthProvider");
   }
+
   return context;
-};
+}

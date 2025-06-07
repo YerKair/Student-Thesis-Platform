@@ -3,71 +3,96 @@
 import { useState, useCallback } from "react";
 import { useToast } from "@/shared/ui/use-toast";
 import { ProjectsService } from "../api/projects.service";
-import { Project, CreateProjectDto } from "@/entities/project/model/types";
+import {
+  Project,
+  CreateProjectDto,
+  ProjectWithDeadlines,
+} from "@/entities/project/model/types";
 
 interface UseProjectsState {
   project: Project | null;
+  projectWithDeadlines: ProjectWithDeadlines | null;
   isLoading: boolean;
   error: string | null;
 }
 
-export function useProjects(teamId: number) {
+interface UseProjectsReturn extends UseProjectsState {
+  createProject: (teamId: number, data: CreateProjectDto) => Promise<void>;
+  getTeamProject: (teamId: number) => Promise<void>;
+  getProjectWithDeadlines: (projectId: number) => Promise<void>;
+}
+
+export function useProjects(): UseProjectsReturn {
   const [state, setState] = useState<UseProjectsState>({
     project: null,
+    projectWithDeadlines: null,
     isLoading: false,
     error: null,
   });
+
   const { toast } = useToast();
 
   const createProject = useCallback(
-    async (data: CreateProjectDto) => {
+    async (teamId: number, data: CreateProjectDto) => {
       try {
         setState((prev) => ({ ...prev, isLoading: true, error: null }));
+
         const project = await ProjectsService.createProject(teamId, data);
         setState((prev) => ({ ...prev, project, isLoading: false }));
 
         toast({
-          title: "Успешно!",
-          description: "Проект создан",
+          title: "Успех",
+          description: "Проект успешно создан",
         });
-
-        return project;
       } catch (error) {
         const message =
           error instanceof Error
             ? error.message
             : "Ошибка при создании проекта";
         setState((prev) => ({ ...prev, error: message, isLoading: false }));
-
         toast({
-          variant: "destructive",
-          title: "Ошибка!",
+          title: "Ошибка",
           description: message,
+          variant: "destructive",
         });
-
-        throw error;
       }
     },
-    [teamId, toast]
+    [toast]
   );
 
-  const fetchProject = useCallback(async () => {
+  const getTeamProject = useCallback(async (teamId: number) => {
     try {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
+
       const project = await ProjectsService.getTeamProject(teamId);
       setState((prev) => ({ ...prev, project, isLoading: false }));
-      return project;
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Ошибка при получении проекта";
       setState((prev) => ({ ...prev, error: message, isLoading: false }));
-      throw error;
     }
-  }, [teamId]);
+  }, []);
+
+  const getProjectWithDeadlines = useCallback(async (projectId: number) => {
+    try {
+      setState((prev) => ({ ...prev, isLoading: true, error: null }));
+
+      const projectWithDeadlines =
+        await ProjectsService.getProjectWithDeadlines(projectId);
+      setState((prev) => ({ ...prev, projectWithDeadlines, isLoading: false }));
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Ошибка при получении проекта с дедлайнами";
+      setState((prev) => ({ ...prev, error: message, isLoading: false }));
+    }
+  }, []);
 
   return {
     ...state,
     createProject,
-    fetchProject,
+    getTeamProject,
+    getProjectWithDeadlines,
   };
 }

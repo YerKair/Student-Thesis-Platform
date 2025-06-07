@@ -1,126 +1,200 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/shared/ui/use-toast";
 import { API_BASE_URL } from "@/shared/constants/config";
 
-interface ProjectFile {
+interface FileVersion {
   id: number;
-  name: string;
-  url: string;
-  createdAt: string;
+  file_name: string;
+  comment: string | null;
+  project_id: number;
+  file_path: string;
+  version_number: number;
+  uploaded_by_id: number;
+  created_at: string;
+  file_size: number | null;
+  file_type: string | null;
+  status: string | null;
 }
 
-export function useProjectFiles(projectId: number) {
-  const [files, setFiles] = useState<ProjectFile[]>([]);
-  const [isUploading, setIsLoading] = useState(false);
+interface UseProjectFilesState {
+  files: FileVersion[];
+  isLoading: boolean;
+  error: string | null;
+}
+
+export function useProjectFiles(projectId: number, stage?: string) {
+  const [state, setState] = useState<UseProjectFilesState>({
+    files: [],
+    isLoading: false,
+    error: null,
+  });
   const { toast } = useToast();
 
-  const loadFiles = async () => {
-    try {
-      const token = localStorage.getItem("authToken");
+  const uploadFile = useCallback(
+    async (file: File, stageKey?: string) => {
+      const token = localStorage.getItem("auth_token");
       if (!token) {
         throw new Error("Не авторизован");
       }
 
-      const response = await fetch(
-        `${API_BASE_URL}/projects/${projectId}/files`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+      try {
+        setState((prev) => ({ ...prev, isLoading: true, error: null }));
+
+        const formData = new FormData();
+        formData.append("file", file);
+        if (stageKey) {
+          formData.append("stage", stageKey);
         }
-      );
+
+        const response = await fetch(
+          `${API_BASE_URL}/projects/${projectId}/files`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            body: formData,
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Ошибка при загрузке файла");
+        }
+
+        const newFile = await response.json();
+        setState((prev) => ({
+          ...prev,
+          files: [...prev.files, newFile],
+          isLoading: false,
+        }));
+
+        toast({
+          title: "Успешно!",
+          description: "Файл загружен",
+        });
+
+        return newFile;
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Ошибка при загрузке файла";
+        setState((prev) => ({ ...prev, error: message, isLoading: false }));
+
+        toast({
+          variant: "destructive",
+          title: "Ошибка!",
+          description: message,
+        });
+
+        throw error;
+      }
+    },
+    [projectId, toast]
+  );
+
+  const downloadFile = useCallback(
+    async (fileId: number, fileName: string) => {
+      const token = localStorage.getItem("auth_token");
+      if (!token) {
+        throw new Error("Не авторизован");
+      }
+
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/projects/files/${fileId}/download`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Ошибка при скачивании файла");
+        }
+
+        // Создаем blob из ответа
+        const blob = await response.blob();
+
+        // Создаем URL для blob
+        const url = window.URL.createObjectURL(blob);
+
+        // Создаем ссылку для скачивания
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+
+        // Очищаем ресурсы
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        toast({
+          title: "Успешно!",
+          description: "Файл скачан",
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Ошибка при скачивании файла";
+
+        toast({
+          variant: "destructive",
+          title: "Ошибка!",
+          description: message,
+        });
+      }
+    },
+    [toast]
+  );
+
+  const fetchFiles = useCallback(async () => {
+    const token = localStorage.getItem("auth_token");
+    if (!token) {
+      throw new Error("Не авторизован");
+    }
+
+    try {
+      setState((prev) => ({ ...prev, isLoading: true, error: null }));
+
+      const url = new URL(`${API_BASE_URL}/projects/${projectId}/files`);
+      if (stage) {
+        url.searchParams.append("stage", stage);
+      }
+
+      const response = await fetch(url.toString(), {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || "Ошибка при загрузке файлов");
+        throw new Error("Ошибка при получении файлов");
       }
 
-      const loadedFiles = await response.json();
-      setFiles(loadedFiles);
+      const files = await response.json();
+      setState((prev) => ({ ...prev, files, isLoading: false }));
+      return files;
     } catch (error) {
-      console.error("Error loading files:", error);
-      toast({
-        title: "Ошибка",
-        description:
-          error instanceof Error ? error.message : "Не удалось загрузить файлы",
-        variant: "destructive",
-      });
+      const message =
+        error instanceof Error ? error.message : "Ошибка при получении файлов";
+      setState((prev) => ({ ...prev, error: message, isLoading: false }));
+      throw error;
     }
-  };
+  }, [projectId, stage]);
 
   useEffect(() => {
-    loadFiles();
-  }, [projectId]);
-
-  const uploadFile = async (file: File, comment?: string) => {
-    try {
-      setIsLoading(true);
-      const token = localStorage.getItem("authToken");
-      if (!token) {
-        throw new Error("Не авторизован");
-      }
-
-      const formData = new FormData();
-      formData.append("file", file);
-      if (comment) {
-        formData.append("comment", comment);
-      }
-
-      // Создаем XMLHttpRequest для отправки файла
-      const xhr = new XMLHttpRequest();
-      xhr.open("POST", `${API_BASE_URL}/projects/${projectId}/files`, true);
-      xhr.setRequestHeader("Authorization", `Bearer ${token}`);
-
-      // Создаем Promise для работы с XMLHttpRequest
-      const uploadPromise = new Promise((resolve, reject) => {
-        xhr.onload = function () {
-          if (xhr.status === 200) {
-            try {
-              const response = JSON.parse(xhr.responseText);
-              resolve(response);
-            } catch (e) {
-              reject(new Error("Ошибка при парсинге ответа"));
-            }
-          } else {
-            reject(new Error(xhr.responseText || "Ошибка при загрузке файла"));
-          }
-        };
-
-        xhr.onerror = function () {
-          reject(new Error("Ошибка сети при загрузке файла"));
-        };
-      });
-
-      // Отправляем файл
-      xhr.send(formData);
-
-      // Ждем завершения загрузки
-      const newFile = await uploadPromise;
-      setFiles((prev) => [...prev, newFile as ProjectFile]);
-      await loadFiles();
-
-      toast({
-        title: "Успех",
-        description: "Файл успешно загружен",
-      });
-    } catch (error) {
-      console.error("Upload error:", error);
-      toast({
-        title: "Ошибка",
-        description:
-          error instanceof Error ? error.message : "Не удалось загрузить файл",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    fetchFiles();
+  }, [fetchFiles]);
 
   return {
-    files,
+    files: state.files,
     uploadFile,
-    isUploading,
+    downloadFile,
+    isLoading: state.isLoading,
+    error: state.error,
   };
 }

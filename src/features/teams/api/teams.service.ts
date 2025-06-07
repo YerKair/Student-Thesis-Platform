@@ -12,7 +12,7 @@ import {
 
 export class TeamsService {
   static async createTeam(data: CreateTeamDto): Promise<Team> {
-    const token = localStorage.getItem("authToken");
+    const token = localStorage.getItem("auth_token");
     if (!token) {
       throw new Error("Не авторизован");
     }
@@ -48,7 +48,7 @@ export class TeamsService {
   }
 
   static async getTeamById(teamId: number): Promise<Team> {
-    const token = localStorage.getItem("authToken");
+    const token = localStorage.getItem("auth_token");
     if (!token) {
       throw new Error("Не авторизован");
     }
@@ -69,7 +69,7 @@ export class TeamsService {
   }
 
   static async getTeamByCode(code: string): Promise<Team> {
-    const token = localStorage.getItem("authToken");
+    const token = localStorage.getItem("auth_token");
     if (!token) {
       throw new Error("Не авторизован");
     }
@@ -90,7 +90,7 @@ export class TeamsService {
   }
 
   static async joinTeam(data: JoinTeamDto): Promise<TeamMemberResponse> {
-    const token = localStorage.getItem("authToken");
+    const token = localStorage.getItem("auth_token");
     if (!token) {
       throw new Error("Не авторизован");
     }
@@ -113,7 +113,7 @@ export class TeamsService {
   }
 
   static async getMyTeams(): Promise<Team[]> {
-    const token = localStorage.getItem("authToken");
+    const token = localStorage.getItem("auth_token");
     if (!token) {
       throw new Error("Не авторизован");
     }
@@ -134,7 +134,7 @@ export class TeamsService {
   }
 
   static async getTeamMembers(teamId: number): Promise<TeamMember[]> {
-    const token = localStorage.getItem("authToken");
+    const token = localStorage.getItem("auth_token");
     if (!token) {
       throw new Error("Не авторизован");
     }
@@ -150,11 +150,18 @@ export class TeamsService {
       throw new Error(errorText || "Ошибка при получении участников команды");
     }
 
-    return await response.json();
+    const data = await response.json();
+    // API возвращает массив участников напрямую
+    return data.map((member: any) => ({
+      id: member.id,
+      fullname: member.fullname,
+      email: member.email,
+      role: member.role || "member",
+    }));
   }
 
   static async deleteTeam(teamId: number): Promise<void> {
-    const token = localStorage.getItem("authToken");
+    const token = localStorage.getItem("auth_token");
     if (!token) {
       throw new Error("Не авторизован");
     }
@@ -178,6 +185,10 @@ export class TeamsService {
       name: response.name,
       code: response.code,
       creator_id: response.creator_id,
+      supervisor_id: response.supervisor_id || null,
+      supervisor_name: response.supervisor_name,
+      members: response.members || [],
+      created_at: response.created_at,
     };
   }
 }

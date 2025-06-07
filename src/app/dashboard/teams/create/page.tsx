@@ -6,11 +6,9 @@ import { TeamsService } from "@/features/teams/api/teams.service";
 import { useToast } from "@/shared/ui/use-toast";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
-import { Textarea } from "@/shared/ui/textarea";
 
 export default function CreateTeamPage() {
   const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
@@ -29,9 +27,12 @@ export default function CreateTeamPage() {
 
     try {
       setIsLoading(true);
+      // Генерируем код команды
+      const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+
       await TeamsService.createTeam({
-        name,
-        description: description || undefined,
+        name: name.trim(),
+        code,
       });
       toast({
         title: "Успех",
@@ -66,22 +67,6 @@ export default function CreateTeamPage() {
               placeholder="Введите название команды"
               disabled={isLoading}
               required
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="description"
-              className="block text-sm font-medium mb-2"
-            >
-              Описание
-            </label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Опишите вашу команду"
-              disabled={isLoading}
-              rows={4}
             />
           </div>
           <Button type="submit" disabled={isLoading}>

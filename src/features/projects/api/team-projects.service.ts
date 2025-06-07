@@ -30,7 +30,7 @@ export class TeamProjectsService {
     teamId: number,
     data: CreateProjectDto
   ): Promise<Project> {
-    const token = localStorage.getItem("authToken");
+    const token = localStorage.getItem("auth_token");
     if (!token) {
       throw new Error("Не авторизован");
     }
@@ -54,7 +54,7 @@ export class TeamProjectsService {
   }
 
   static async getTeamProject(teamId: number): Promise<Project | null> {
-    const token = localStorage.getItem("authToken");
+    const token = localStorage.getItem("auth_token");
     if (!token) {
       throw new Error("Не авторизован");
     }

@@ -251,18 +251,36 @@ export class TeamsService {
     token: string
   ): Promise<TeamMember[]> {
     try {
+      console.log(`Fetching team members for team ${teamId}`);
+      console.log(`API URL: ${API_BASE_URL}/teams/${teamId}/members`);
+
       const response = await fetch(`${API_BASE_URL}/teams/${teamId}/members`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
+      console.log(`Response status: ${response.status}`);
+      console.log(`Response ok: ${response.ok}`);
+
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Error response: ${errorText}`);
         throw new Error("Failed to fetch team members");
       }
 
       const data = await response.json();
-      return data.members;
+      console.log("Raw API response:", data);
+
+      const mappedData = data.map((member: any) => ({
+        id: member.id,
+        fullname: member.fullname,
+        email: member.email,
+        role: member.role || "member",
+      }));
+
+      console.log("Mapped team members:", mappedData);
+      return mappedData;
     } catch (error) {
       console.error("Error fetching team members:", error);
       throw error;

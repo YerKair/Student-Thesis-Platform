@@ -1,10 +1,56 @@
 export interface Project {
   id: number;
   name: string;
-  description: string | null;
-  teamId: number;
-  createdAt: string;
-  updatedAt: string;
+  description?: string;
+  team_id: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StageDeadlineInfo {
+  id: number;
+  project_id: number;
+  stage: "initial" | "technical" | "methodological" | "final";
+  deadline: string;
+  set_by_id: number;
+  set_by_name: string;
+  set_by_email: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectStageStatus {
+  id: number;
+  project_id: number;
+  stage: "initial" | "technical" | "methodological" | "final";
+  status: "waiting" | "in_progress" | "completed" | "failed";
+  supervisor_comment?: string;
+  updated_by_id?: number;
+  updated_by_name?: string;
+  updated_by_email?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectWithDeadlines {
+  id: number;
+  name: string;
+  description?: string;
+  team_id: number;
+  created_at: string;
+  updated_at: string;
+  team?: {
+    id: number;
+    name: string;
+    members: Array<{
+      id: number;
+      fullname: string;
+      email: string;
+      role?: string;
+    }>;
+  };
+  deadlines: StageDeadlineInfo[];
+  stage_statuses: ProjectStageStatus[];
 }
 
 export interface CreateProjectDto {
@@ -19,6 +65,16 @@ export interface ProjectResponse {
   team_id: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface ProjectWithDeadlinesResponse {
+  id: number;
+  name: string;
+  description: string | null;
+  team_id: number;
+  created_at: string;
+  updated_at: string;
+  deadlines: StageDeadlineInfo[];
 }
 
 export interface FileVersion {

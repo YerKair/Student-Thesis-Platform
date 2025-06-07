@@ -14,7 +14,7 @@ import { useToast } from "@/shared/ui/use-toast";
 import { Switch } from "@/shared/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { useState } from "react";
-import { Bell, Shield, Palette, Moon, Sun } from "lucide-react";
+import { Check, User, Bell, Lock, Palette, Shield } from "lucide-react";
 
 export default function SettingsPage() {
   const { toast } = useToast();

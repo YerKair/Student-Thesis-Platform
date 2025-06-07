@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuthContext } from "@/app/providers/auth-provider";
 import { UsersService } from "@/features/users/api/users-service";
 import { User } from "@/entities/user/model/types";
@@ -29,7 +29,7 @@ export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     if (!token) return;
     try {
       const response = await UsersService.getUsers(token);
@@ -40,7 +40,7 @@ export default function UsersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
   const handleRoleToggle = async (userId: string, role: UserRole) => {
     if (!token) return;
@@ -75,7 +75,7 @@ export default function UsersPage() {
     if (token) {
       fetchUsers();
     }
-  }, [token]);
+  }, [token, fetchUsers]);
 
   if (loading) {
     return <div>Загрузка...</div>;

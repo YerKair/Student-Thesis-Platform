@@ -1,18 +1,8 @@
-import "@/app/globals.css";
 import { Inter } from "next/font/google";
-import { AuthProvider } from "@/app/providers/auth-provider";
-import { MobileScreenWarning } from "@/shared/ui/feedback/MobileScreenWarning";
+import { ClientLayout } from "./providers/client-layout";
+import "./globals.css";
 
-const inter = Inter({
-  subsets: ["latin", "cyrillic"],
-  variable: "--font-inter",
-});
-
-export const metadata = {
-  title: "Student Thesis Platform",
-  description: "Platform for managing student theses",
-  viewport: "width=device-width, initial-scale=1, viewport-fit=cover",
-};
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export default function RootLayout({
   children,
@@ -20,23 +10,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
-        <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1.0, user-scalable=no"
-        />
-        <meta name="theme-color" content="#ffffff" />
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="theme-color" content="#000000" />
+        <meta name="description" content="Student Thesis Platform" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
       </head>
       <body
         className={`${inter.variable} font-sans bg-background text-foreground antialiased selection:bg-primary/10 mobile-container`}
+        suppressHydrationWarning
       >
-        <AuthProvider>
-          <MobileScreenWarning persistent={false} maxWidth={480} />
-          {children}
-        </AuthProvider>
+        <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
   );

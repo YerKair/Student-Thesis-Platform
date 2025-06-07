@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useAuthContext } from "@/app/providers/auth-provider";
 import { useToast } from "@/shared/ui/use-toast";
 import {
   Card,
@@ -22,14 +21,7 @@ import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Badge } from "@/shared/ui/badge";
 import { Switch } from "@/shared/ui/switch";
-import {
-  Loader2,
-  Send,
-  Megaphone,
-  Info,
-  AlertTriangle,
-  CheckCircle2,
-} from "lucide-react";
+import { Loader2, Send, Mail, Info, AlertTriangle } from "lucide-react";
 
 // Моковые данные для истории уведомлений
 const mockNotifications = [
@@ -100,7 +92,6 @@ export default function NotificationsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [notifications, setNotifications] = useState(mockNotifications);
   const { toast } = useToast();
-  const { token } = useAuthContext();
 
   // Состояние формы
   const [title, setTitle] = useState("");
@@ -268,7 +259,7 @@ export default function NotificationsPage() {
           onClick={() => setActiveTab("create")}
           className="gap-2"
         >
-          <Megaphone className="h-4 w-4" />
+          <Mail className="h-4 w-4" />
           Создать уведомление
         </Button>
         <Button

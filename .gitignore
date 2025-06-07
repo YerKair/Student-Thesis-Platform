@@ -1,2 +1,6 @@
 node_modules
 *.node
+.next
+.DS_Store
+dist
+build

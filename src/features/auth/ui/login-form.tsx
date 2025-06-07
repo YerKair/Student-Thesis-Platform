@@ -1,16 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
 import { useToast } from "@/shared/ui/use-toast";
 import { loginSchema, LoginFormValues } from "../model";
-import { useAuthContext } from "@/app/providers/auth-provider";
 import { SpaceInput } from "@/shared/ui/space-input";
 import { SpaceButton } from "@/shared/ui/space-button";
 import { SpaceProgressLoader } from "@/shared/ui/space-progress-loader";
+import { useAuthContext } from "@/app/providers/auth-provider";
+import { Button } from "@/shared/ui/button";
+import { Input } from "@/shared/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
+import { Label } from "@/shared/ui/label";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 export const LoginForm = () => {
   const { login } = useAuthContext();

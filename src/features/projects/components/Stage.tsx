@@ -4,16 +4,21 @@ import { useState } from "react";
 import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
 import { Badge } from "@/shared/ui/badge";
-import { format } from "date-fns";
-import { ru } from "date-fns/locale";
 import { ChevronDown, ChevronUp, Upload } from "lucide-react";
 import { useProjectFiles } from "../lib/use-project-files";
 
 interface ProjectFile {
   id: number;
-  name: string;
-  url: string;
-  createdAt: string;
+  file_name: string;
+  comment: string | null;
+  project_id: number;
+  file_path: string;
+  version_number: number;
+  uploaded_by_id: number;
+  created_at: string;
+  file_size: number | null;
+  file_type: string | null;
+  status: string | null;
 }
 
 interface StageProps {
@@ -24,6 +29,7 @@ interface StageProps {
   status: "completed" | "in_progress" | "waiting";
   supervisorComment?: string;
   defaultExpanded?: boolean;
+  stageKey?: string;
 }
 
 const statusColors = {
@@ -46,19 +52,29 @@ export function Stage({
   status,
   supervisorComment,
   defaultExpanded = false,
+  stageKey,
 }: StageProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
-  const { files, uploadFile, isUploading } = useProjectFiles(projectId);
+  const { files, uploadFile, downloadFile, isLoading } = useProjectFiles(
+    projectId,
+    stageKey
+  );
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      await uploadFile(file);
+      await uploadFile(file, stageKey);
     }
   };
 
-  const formattedDeadline = format(new Date(deadline), "d MMMM yyyy", {
-    locale: ru,
+  const handleDownload = (file: ProjectFile) => {
+    downloadFile(file.id, file.file_name);
+  };
+
+  const formattedDeadline = new Date(deadline).toLocaleDateString("ru-RU", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   });
 
   return (
@@ -107,15 +123,15 @@ export function Stage({
                   key={file.id}
                   className="flex items-center justify-between p-2 bg-gray-50 rounded"
                 >
-                  <span className="text-sm">{file.name}</span>
-                  <a
-                    href={file.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <span className="text-sm">{file.file_name}</span>
+                  <Button
+                    variant="link"
+                    size="sm"
+                    onClick={() => handleDownload(file)}
                     className="text-blue-600 hover:text-blue-800 text-sm"
                   >
                     Скачать
-                  </a>
+                  </Button>
                 </div>
               ))}
 
@@ -125,19 +141,19 @@ export function Stage({
                   id="file-upload"
                   className="hidden"
                   onChange={handleFileChange}
-                  disabled={isUploading}
+                  disabled={isLoading}
                 />
                 <label htmlFor="file-upload">
                   <Button
                     type="button"
                     variant="outline"
-                    disabled={isUploading}
+                    disabled={isLoading}
                     className="w-full"
                     asChild
                   >
                     <span>
                       <Upload className="h-4 w-4 mr-2" />
-                      {isUploading ? "Загрузка..." : "Загрузить файл"}
+                      {isLoading ? "Загрузка..." : "Загрузить файл"}
                     </span>
                   </Button>
                 </label>

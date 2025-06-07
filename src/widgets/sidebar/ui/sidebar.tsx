@@ -1,24 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { useAuthContext } from "@/app/providers/auth-provider";
-import {
-  LayoutDashboard,
-  Users,
-  FileText,
-  UserCircle,
-  Settings,
-  BookOpen,
-  GraduationCap,
-  HelpCircle,
-  ChevronLeft,
-  ChevronRight,
-  X,
-} from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { cn } from "@/shared/lib/utils";
+import { Button } from "@/shared/ui/button";
+import {
+  CollapsibleTrigger,
+  CollapsibleContent,
+  Collapsible,
+} from "@/shared/ui/collapsible";
+import {
+  FileText,
+  Settings,
+  X,
+  LayoutDashboard,
+  Users,
+  UserCircle,
+  BookOpen,
+  ChevronLeft,
+  ChevronRight,
+  HelpCircle,
+} from "lucide-react";
+import { useAuthContext } from "@/app/providers/auth-provider";
 import { AIChat } from "@/features/ai-chat";
+import { UserRole } from "@/entities/user/model/types";
 
 interface NavItem {
   title: string;
@@ -78,13 +84,12 @@ export function Sidebar({
       title: "Команды",
       href: "/dashboard/teams",
       icon: <Users className="h-5 w-5" />,
-      badge: "Новое",
-      badgeColor: "bg-green-500",
     },
     {
       title: "Супервайзер",
       href: "/supervisor",
       icon: <Users className="h-5 w-5" />,
+      roles: ["supervisor", "admin"],
     },
     {
       title: "Договоры",
@@ -97,28 +102,26 @@ export function Sidebar({
       icon: <BookOpen className="h-5 w-5" />,
     },
     {
-      title: "Пользователи",
-      href: "/dashboard/users",
-      icon: <Users className="h-5 w-5" />,
-      roles: ["admin"],
-    },
-    {
-      title: "Учебные программы",
-      href: "/dashboard/programs",
-      icon: <GraduationCap className="h-5 w-5" />,
-      roles: ["admin", "teacher"],
-    },
-    {
       title: "Настройки",
       href: "/dashboard/settings",
       icon: <Settings className="h-5 w-5" />,
     },
+    {
+      title: "Ревью",
+      href: "/dashboard/review",
+      icon: <BookOpen className="h-5 w-5" />,
+      roles: ["supervisor", "admin"],
+    },
   ];
 
   // Фильтрация навигационных элементов в зависимости от роли
-  const filteredNavItems = navItems.filter(
-    (item) => !item.roles || (user && item.roles.includes(user.role))
-  );
+  const filteredNavItems = navItems.filter((item) => {
+    if (!item.roles) return true; // Если роли не указаны, показываем всем
+    if (!user) return false; // Если пользователь не авторизован
+
+    // Проверяем, есть ли пересечение между ролями пользователя и требуемыми ролями
+    return item.roles.some((role) => user.roles.includes(role as UserRole));
+  });
 
   // В мобильном режиме сайдбар всегда развернут (не collapsed)
   const sidebarClasses = isMobile

@@ -1,4 +1,8 @@
+import { z } from "zod";
 import { User } from "@/entities/user/model/types";
+import { loginSchema } from "./schema";
+
+export type LoginFormValues = z.infer<typeof loginSchema>;
 
 export interface LoginCredentials {
   email: string;
@@ -18,4 +22,10 @@ export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+}
+
+export interface AuthContextType extends AuthState {
+  login: (credentials: LoginCredentials) => Promise<void>;
+  register: (credentials: RegisterCredentials) => Promise<void>;
+  logout: () => void;
 }
