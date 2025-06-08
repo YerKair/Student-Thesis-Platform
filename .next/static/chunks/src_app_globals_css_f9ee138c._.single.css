@@ -636,10 +636,6 @@
     margin-inline: calc(var(--spacing) * -1);
   }
 
-  .-mx-6 {
-    margin-inline: calc(var(--spacing) * -6);
-  }
-
   .mx-auto {
     margin-inline: auto;
   }
@@ -1093,10 +1089,6 @@
 
   .min-w-\[var\(--radix-select-trigger-width\)\] {
     min-width: var(--radix-select-trigger-width);
-  }
-
-  .min-w-full {
-    min-width: 100%;
   }
 
   .flex-1 {
@@ -1685,6 +1677,10 @@
 
   .bg-gray-400 {
     background-color: var(--color-gray-400);
+  }
+
+  .bg-gray-500 {
+    background-color: var(--color-gray-500);
   }
 
   .bg-gray-800 {
@@ -2496,10 +2492,6 @@
     white-space: nowrap;
   }
 
-  .text-amber-500 {
-    color: var(--color-amber-500);
-  }
-
   .text-amber-600 {
     color: var(--color-amber-600);
   }
@@ -2586,10 +2578,6 @@
 
   .text-gray-900 {
     color: var(--color-gray-900);
-  }
-
-  .text-green-500 {
-    color: var(--color-green-500);
   }
 
   .text-green-600 {

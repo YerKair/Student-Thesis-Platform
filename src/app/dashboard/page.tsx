@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useAuthContext } from "@/app/providers/auth-provider";
+import { useProfileCompletion } from "@/features/dashboard/hooks/use-profile-completion";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Button } from "@/shared/ui/button";
@@ -26,14 +27,27 @@ const DashboardRecommendations = dynamic(
 );
 
 export default function DashboardPage() {
-  const { user } = useAuthContext();
+  const { user, token } = useAuthContext();
+  const { profile } = useProfileCompletion(token);
+
+  // Получаем имя для приветствия
+  const getDisplayName = () => {
+    if (profile?.fullname) {
+      // Берем первое слово из полного имени
+      return profile.fullname.split(" ")[0];
+    }
+    if (user?.name) {
+      return user.name.split(" ")[0];
+    }
+    return "пользователь";
+  };
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-            Добро пожаловать, {user?.name?.split(" ")[0] || "пользователь"}!
+            Добро пожаловать, {getDisplayName()}!
           </h1>
           <p className="text-sm md:text-base text-gray-600">
             Здесь вы можете отслеживать прогресс вашей работы

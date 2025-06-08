@@ -58,15 +58,12 @@ export class AuthService {
 
     const userData = await response.json();
 
-    // Получаем полный профиль пользователя
-    const profileResponse = await fetch(
-      `${API_URL}/users/get-user-by-email?email=${userData.message.username}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    // Получаем полный профиль пользователя через новый эндпойнт
+    const profileResponse = await fetch(`${API_URL}/users/profile`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
     if (!profileResponse.ok) {
       throw new Error("Не удалось получить профиль пользователя");
@@ -80,6 +77,10 @@ export class AuthService {
       email: profileData.email || userData.message.username,
       role: profileData.roles?.[0] || "student",
       roles: profileData.roles || ["student"],
+      fullname: profileData.fullname,
+      specialization: profileData.specialization,
+      course: profileData.course,
+      group: profileData.group,
     };
   }
 }

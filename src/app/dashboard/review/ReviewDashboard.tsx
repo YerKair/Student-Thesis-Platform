@@ -226,12 +226,20 @@ const ReviewDashboard: React.FC = () => {
           );
 
           const updatedStageStatus = {
+            id:
+              existingStageIndex >= 0
+                ? updatedStageStatuses[existingStageIndex].id
+                : Date.now() + 1, // временный ID для новых записей
             stage: selectedStage,
             status: stageStatus,
             supervisor_comment: stageComment,
             updated_by_name: user?.name || "Ревьюер",
+            updated_by_email: user?.email || "",
             updated_at: new Date().toISOString(),
-            created_at: new Date().toISOString(),
+            created_at:
+              existingStageIndex >= 0
+                ? updatedStageStatuses[existingStageIndex].created_at
+                : new Date().toISOString(),
           };
 
           if (existingStageIndex >= 0) {
@@ -261,12 +269,20 @@ const ReviewDashboard: React.FC = () => {
               );
 
               const updatedStageStatus = {
+                id:
+                  existingStageIndex >= 0
+                    ? updatedStageStatuses[existingStageIndex].id
+                    : Date.now() + 1, // временный ID для новых записей
                 stage: selectedStage,
                 status: stageStatus,
                 supervisor_comment: stageComment,
                 updated_by_name: user?.name || "Ревьюер",
+                updated_by_email: user?.email || "",
                 updated_at: new Date().toISOString(),
-                created_at: new Date().toISOString(),
+                created_at:
+                  existingStageIndex >= 0
+                    ? updatedStageStatuses[existingStageIndex].created_at
+                    : new Date().toISOString(),
               };
 
               if (existingStageIndex >= 0) {
@@ -461,7 +477,7 @@ const ReviewDashboard: React.FC = () => {
                       {/* Mobile: Vertical tabs, Desktop: Horizontal tabs */}
                       <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full bg-gray-100 p-1 rounded-lg border-2 border-gray-200 gap-1 sm:gap-0">
                         {stages.map((stage) => {
-                          const stageStatus = getStageStatus(
+                          const currentStageStatus = getStageStatus(
                             selectedTeam.project?.stage_statuses || [],
                             stage.value
                           );
@@ -474,14 +490,15 @@ const ReviewDashboard: React.FC = () => {
                               <span className="break-words leading-tight">
                                 {stage.label}
                               </span>
-                              {stageStatus && (
+                              {currentStageStatus && (
                                 <div
                                   className={`absolute -top-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 rounded-full border-2 border-white ${
-                                    stageStatus.status === "completed"
+                                    currentStageStatus.status === "completed"
                                       ? "bg-emerald-500"
-                                      : stageStatus.status === "failed"
+                                      : currentStageStatus.status === "failed"
                                       ? "bg-red-500"
-                                      : stageStatus.status === "in_progress"
+                                      : currentStageStatus.status ===
+                                        "in_progress"
                                       ? "bg-blue-500"
                                       : "bg-amber-500"
                                   }`}
@@ -493,7 +510,7 @@ const ReviewDashboard: React.FC = () => {
                       </TabsList>
 
                       {stages.map((stage) => {
-                        const stageStatus = getStageStatus(
+                        const currentStageStatus = getStageStatus(
                           selectedTeam.project?.stage_statuses || [],
                           stage.value
                         );
@@ -511,27 +528,28 @@ const ReviewDashboard: React.FC = () => {
                                   <h4 className="font-bold text-lg sm:text-xl text-gray-900 mb-2">
                                     {stage.label}
                                   </h4>
-                                  {stageStatus && (
+                                  {currentStageStatus && (
                                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                                       <Badge
                                         className={`px-3 py-1 font-semibold border w-fit ${
                                           statusColors[
-                                            stageStatus.status as keyof typeof statusColors
+                                            currentStageStatus.status as keyof typeof statusColors
                                           ]
                                         }`}
                                       >
-                                        {stageStatus.status === "waiting" &&
-                                          "Ожидание"}
-                                        {stageStatus.status === "in_progress" &&
-                                          "В процессе"}
-                                        {stageStatus.status === "completed" &&
-                                          "Завершен"}
-                                        {stageStatus.status === "failed" &&
-                                          "Провален"}
+                                        {currentStageStatus.status ===
+                                          "waiting" && "Ожидание"}
+                                        {currentStageStatus.status ===
+                                          "in_progress" && "В процессе"}
+                                        {currentStageStatus.status ===
+                                          "completed" && "Завершен"}
+                                        {currentStageStatus.status ===
+                                          "failed" && "Провален"}
                                       </Badge>
-                                      {stageStatus.updated_by_name && (
+                                      {currentStageStatus.updated_by_name && (
                                         <span className="text-xs sm:text-sm text-gray-600 font-medium">
-                                          от {stageStatus.updated_by_name}
+                                          от{" "}
+                                          {currentStageStatus.updated_by_name}
                                         </span>
                                       )}
                                     </div>
@@ -634,13 +652,13 @@ const ReviewDashboard: React.FC = () => {
                               </div>
 
                               {/* Stage Comment */}
-                              {stageStatus?.supervisor_comment && (
+                              {currentStageStatus?.supervisor_comment && (
                                 <div className="p-4 sm:p-6 bg-blue-50 rounded-xl border-2 border-blue-200">
                                   <h5 className="font-bold text-blue-900 mb-3 text-sm sm:text-base">
                                     Комментарий ревьюера
                                   </h5>
                                   <p className="text-blue-800 leading-relaxed font-medium text-sm sm:text-base break-words">
-                                    {stageStatus.supervisor_comment}
+                                    {currentStageStatus.supervisor_comment}
                                   </p>
                                 </div>
                               )}

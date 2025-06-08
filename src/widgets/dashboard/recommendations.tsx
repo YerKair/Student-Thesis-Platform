@@ -15,12 +15,25 @@ import {
   CardTitle,
 } from "@/shared/ui/card";
 import { useDashboardData } from "@/features/dashboard/hooks/use-dashboard-data";
+import { useProfileCompletion } from "@/features/dashboard/hooks/use-profile-completion";
 import { useAuthContext } from "@/app/providers/auth-provider";
 
 export default function DashboardRecommendations() {
-  const { user } = useAuthContext();
-  const { team, projectProgress, isInTeam, hasProject, isLoading } =
-    useDashboardData();
+  const { user, token } = useAuthContext();
+  const {
+    team,
+    projectProgress,
+    isInTeam,
+    hasProject,
+    isLoading: dashboardLoading,
+  } = useDashboardData();
+  const {
+    completionPercentage,
+    isComplete,
+    isLoading: profileLoading,
+  } = useProfileCompletion(token);
+
+  const isLoading = dashboardLoading || profileLoading;
 
   // Проверяем, является ли пользователь студентом
   const isStudent =
@@ -28,28 +41,43 @@ export default function DashboardRecommendations() {
     ((user.roles && user.roles.includes("student")) || user.role === "student");
 
   // Базовые рекомендации для не-студентов
-  const defaultRecommendations = [
-    {
-      title: "Заполните профиль",
-      description: "Заполните данные профиля для более эффективной работы",
-      icon: <CheckCircle2 className="h-4 w-4" />,
-      completed: false,
-    },
-    {
-      title: "Изучите функционал",
-      description: "Ознакомьтесь с возможностями платформы",
-      icon: <CheckCircle2 className="h-4 w-4" />,
-      completed: false,
-    },
-    {
-      title: "Настройте уведомления",
-      description: "Настройте уведомления для важных событий",
-      icon: <CheckCircle2 className="h-4 w-4" />,
-      completed: false,
-    },
-  ];
+  const getDefaultRecommendations = () => {
+    const recommendations = [];
+
+    // Рекомендация по профилю
+    if (!isComplete) {
+      recommendations.push({
+        title: "Заполните профиль",
+        description: `Заполните данные профиля для более эффективной работы (${completionPercentage}%)`,
+        icon: <CheckCircle2 className="h-4 w-4" />,
+        completed: false,
+        priority: 1,
+      });
+    }
+
+    recommendations.push(
+      {
+        title: "Изучите функционал",
+        description: "Ознакомьтесь с возможностями платформы",
+        icon: <CheckCircle2 className="h-4 w-4" />,
+        completed: false,
+        priority: 2,
+      },
+      {
+        title: "Настройте уведомления",
+        description: "Настройте уведомления для важных событий",
+        icon: <CheckCircle2 className="h-4 w-4" />,
+        completed: false,
+        priority: 3,
+      }
+    );
+
+    return recommendations.slice(0, 3);
+  };
 
   if (!isStudent) {
+    const recommendations = getDefaultRecommendations();
+
     return (
       <Card className="bg-gradient-to-b from-blue-50 to-white border-blue-100">
         <CardHeader>
@@ -58,9 +86,19 @@ export default function DashboardRecommendations() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {defaultRecommendations.map((rec, i) => (
+            {recommendations.map((rec, i) => (
               <div key={i} className="flex items-start gap-3">
-                <div className="rounded-full p-1.5 bg-blue-100 text-blue-600 mt-0.5">
+                <div
+                  className={`rounded-full p-1.5 mt-0.5 ${
+                    rec.completed
+                      ? "bg-green-100 text-green-600"
+                      : rec.priority === 1
+                      ? "bg-red-100 text-red-600"
+                      : rec.priority === 2
+                      ? "bg-amber-100 text-amber-600"
+                      : "bg-blue-100 text-blue-600"
+                  }`}
+                >
                   {rec.icon}
                 </div>
                 <div>
@@ -105,21 +143,23 @@ export default function DashboardRecommendations() {
   const getStudentRecommendations = () => {
     const recommendations = [];
 
-    // Рекомендация по профилю (всегда показываем)
-    recommendations.push({
-      title: "Заполните профиль",
-      description: "Заполните данные профиля для более эффективной работы",
-      icon: <CheckCircle2 className="h-4 w-4" />,
-      completed: false, // TODO: можно добавить проверку заполненности профиля
-      priority: 1,
-    });
+    // Рекомендация по профилю
+    if (!isComplete) {
+      recommendations.push({
+        title: "Заполните профиль",
+        description: `Заполните данные профиля для более эффективной работы (${completionPercentage}%)`,
+        icon: <CheckCircle2 className="h-4 w-4" />,
+        completed: false,
+        priority: 1,
+      });
+    }
 
     // Рекомендация по команде
     if (!isInTeam) {
       recommendations.push({
-        title: "Присоединитесь к команде",
-        description: "Работа в команде улучшает качество проекта",
-        icon: <Users className="h-4 w-4" />,
+        title: "Создайте проект",
+        description: "Создайте проект для вашей команды",
+        icon: <BookOpen className="h-4 w-4" />,
         completed: false,
         priority: 2,
       });
@@ -198,11 +238,7 @@ export default function DashboardRecommendations() {
                     : "bg-blue-100 text-blue-600"
                 }`}
               >
-                {rec.completed ? (
-                  <CheckCircle2 className="h-4 w-4" />
-                ) : (
-                  <AlertCircle className="h-4 w-4" />
-                )}
+                {rec.icon}
               </div>
               <div>
                 <p className="font-medium text-sm">{rec.title}</p>

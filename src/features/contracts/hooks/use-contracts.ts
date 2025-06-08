@@ -23,6 +23,7 @@ interface UseContractsReturn {
   deleteContract: (id: number) => Promise<boolean>;
   generateDocument: (id: number) => Promise<string | null>;
   downloadDocument: (id: number) => Promise<void>;
+  signContract: (id: number) => Promise<boolean>;
   refreshContracts: () => Promise<void>;
   refreshTemplates: () => Promise<void>;
 }
@@ -212,6 +213,32 @@ export function useContracts(): UseContractsReturn {
     [token]
   );
 
+  const signContract = useCallback(
+    async (id: number): Promise<boolean> => {
+      if (!token) {
+        setError("Authentication required");
+        return false;
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        await ContractsService.signContract(id, token);
+        return true;
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to sign contract";
+        setError(errorMessage);
+        console.error("Error signing contract:", err);
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [token]
+  );
+
   // Load contracts and templates on mount
   useEffect(() => {
     if (token) {
@@ -230,6 +257,7 @@ export function useContracts(): UseContractsReturn {
     deleteContract,
     generateDocument,
     downloadDocument,
+    signContract,
     refreshContracts,
     refreshTemplates,
   };

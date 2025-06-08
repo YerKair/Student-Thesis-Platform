@@ -1,8 +1,5 @@
 import { z } from "zod";
 import { User } from "@/entities/user/model/types";
-import { loginSchema } from "./schema";
-
-export type LoginFormValues = z.infer<typeof loginSchema>;
 
 export interface LoginCredentials {
   email: string;

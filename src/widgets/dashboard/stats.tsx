@@ -12,27 +12,144 @@ import {
   CardTitle,
 } from "@/shared/ui/card";
 import { useDashboardData } from "@/features/dashboard/hooks/use-dashboard-data";
+import { useProfileCompletion } from "@/features/dashboard/hooks/use-profile-completion";
+import { useContracts } from "@/features/dashboard/hooks/use-contracts";
 import { useAuthContext } from "@/app/providers/auth-provider";
 
 export default function DashboardStats() {
-  const { user } = useAuthContext();
-  const { team, projectProgress, isInTeam, hasProject, isLoading } =
-    useDashboardData();
+  const { user, token } = useAuthContext();
+  const {
+    team,
+    projectProgress,
+    isInTeam,
+    hasProject,
+    isLoading: dashboardLoading,
+  } = useDashboardData();
+  const { completionPercentage, isLoading: profileLoading } =
+    useProfileCompletion(token);
+  const { stats: contractsStats, isLoading: contractsLoading } =
+    useContracts(token);
+
+  const isLoading = dashboardLoading || profileLoading || contractsLoading;
 
   // Проверяем, является ли пользователь студентом
   const isStudent =
     user &&
     ((user.roles && user.roles.includes("student")) || user.role === "student");
 
+  // Функция для получения описания договоров
+  const getContractsDescription = () => {
+    if (contractsLoading) return "Загрузка...";
+    if (!contractsStats.hasContracts) return "Нет договоров";
+
+    const { pending, approved, draft, rejected, signed } = contractsStats;
+
+    if (pending > 0) {
+      return `${pending} ожидает подписания`;
+    } else if (signed > 0) {
+      return `${signed} подписан${signed > 1 ? "о" : ""}`;
+    } else if (approved > 0) {
+      return `${approved} одобрен${approved > 1 ? "о" : ""}`;
+    } else if (draft > 0) {
+      return `${draft} черновик${draft > 1 ? "ов" : ""}`;
+    } else if (rejected > 0) {
+      return `${rejected} отклонен${rejected > 1 ? "о" : ""}`;
+    }
+
+    return `Всего: ${contractsStats.total}`;
+  };
+
+  // Функция для получения значения карточки договоров
+  const getContractsValue = () => {
+    if (contractsLoading) {
+      return <div className="h-2 bg-gray-200 rounded animate-pulse mt-2"></div>;
+    }
+
+    if (!contractsStats.hasContracts) {
+      return (
+        <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-800 text-xs mt-2 inline-block">
+          Нет договоров
+        </span>
+      );
+    }
+
+    const { pending, approved, draft, rejected, signed } = contractsStats;
+
+    if (pending > 0) {
+      return (
+        <div className="flex items-center gap-2 mt-2">
+          <span className="h-2 w-2 rounded-full bg-amber-500"></span>
+          <span className="text-sm text-gray-600">Требуется подпись</span>
+        </div>
+      );
+    } else if (signed > 0) {
+      return (
+        <div className="flex items-center gap-2 mt-2">
+          <span className="h-2 w-2 rounded-full bg-blue-500"></span>
+          <span className="text-sm text-gray-600">Подписано</span>
+        </div>
+      );
+    } else if (approved > 0) {
+      return (
+        <div className="flex items-center gap-2 mt-2">
+          <span className="h-2 w-2 rounded-full bg-green-500"></span>
+          <span className="text-sm text-gray-600">Одобрено</span>
+        </div>
+      );
+    } else if (draft > 0) {
+      return (
+        <div className="flex items-center gap-2 mt-2">
+          <span className="h-2 w-2 rounded-full bg-blue-500"></span>
+          <span className="text-sm text-gray-600">Черновик</span>
+        </div>
+      );
+    } else if (rejected > 0) {
+      return (
+        <div className="flex items-center gap-2 mt-2">
+          <span className="h-2 w-2 rounded-full bg-red-500"></span>
+          <span className="text-sm text-gray-600">Отклонено</span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex items-center gap-2 mt-2">
+        <span className="h-2 w-2 rounded-full bg-gray-500"></span>
+        <span className="text-sm text-gray-600">Договоры</span>
+      </div>
+    );
+  };
+
+  // Функция для получения цвета карточки договоров
+  const getContractsColor = () => {
+    if (contractsLoading || !contractsStats.hasContracts) return "bg-gray-400";
+
+    const { pending, approved, rejected, signed } = contractsStats;
+
+    if (pending > 0) return "bg-amber-500";
+    if (signed > 0) return "bg-blue-500";
+    if (approved > 0) return "bg-green-500";
+    if (rejected > 0) return "bg-red-500";
+
+    return "bg-blue-500";
+  };
+
   // Если не студент, показываем базовую статистику
   if (!isStudent) {
     const defaultStats = [
       {
         title: "Профиль",
-        description: "Заполнено на 75%",
+        description: `Заполнено на ${completionPercentage}%`,
         icon: <User className="h-5 w-5" />,
-        value: <Progress value={75} className="h-2 w-full mt-2" />,
-        color: "bg-blue-500",
+        value: (
+          <Progress value={completionPercentage} className="h-2 w-full mt-2" />
+        ),
+        color:
+          completionPercentage >= 80
+            ? "bg-green-500"
+            : completionPercentage >= 50
+            ? "bg-blue-500"
+            : "bg-red-500",
         link: "/dashboard/profile",
       },
       {
@@ -49,15 +166,10 @@ export default function DashboardStats() {
       },
       {
         title: "Договоры",
-        description: "1 ожидает подписания",
+        description: getContractsDescription(),
         icon: <FileText className="h-5 w-5" />,
-        value: (
-          <div className="flex items-center gap-2 mt-2">
-            <span className="h-2 w-2 rounded-full bg-amber-500"></span>
-            <span className="text-sm text-gray-600">Требуется подпись</span>
-          </div>
-        ),
-        color: "bg-amber-500",
+        value: getContractsValue(),
+        color: getContractsColor(),
         link: "/dashboard/contracts",
       },
       {
@@ -181,10 +293,17 @@ export default function DashboardStats() {
   const stats = [
     {
       title: "Профиль",
-      description: "Заполнено на 75%",
+      description: `Заполнено на ${completionPercentage}%`,
       icon: <User className="h-5 w-5" />,
-      value: <Progress value={75} className="h-2 w-full mt-2" />,
-      color: "bg-blue-500",
+      value: (
+        <Progress value={completionPercentage} className="h-2 w-full mt-2" />
+      ),
+      color:
+        completionPercentage >= 80
+          ? "bg-green-500"
+          : completionPercentage >= 50
+          ? "bg-blue-500"
+          : "bg-red-500",
       link: "/dashboard/profile",
     },
     {
@@ -197,15 +316,10 @@ export default function DashboardStats() {
     },
     {
       title: "Договоры",
-      description: "1 ожидает подписания",
+      description: getContractsDescription(),
       icon: <FileText className="h-5 w-5" />,
-      value: (
-        <div className="flex items-center gap-2 mt-2">
-          <span className="h-2 w-2 rounded-full bg-amber-500"></span>
-          <span className="text-sm text-gray-600">Требуется подпись</span>
-        </div>
-      ),
-      color: "bg-amber-500",
+      value: getContractsValue(),
+      color: getContractsColor(),
       link: "/dashboard/contracts",
     },
     {
@@ -213,7 +327,14 @@ export default function DashboardStats() {
       description: getProjectDescription(),
       icon: <BookOpen className="h-5 w-5" />,
       value: getProjectValue(),
-      color: hasProject ? "bg-green-500" : "bg-gray-400",
+      color:
+        hasProject && projectProgress
+          ? projectProgress.progressPercentage >= 75
+            ? "bg-green-500"
+            : projectProgress.progressPercentage >= 25
+            ? "bg-blue-500"
+            : "bg-amber-500"
+          : "bg-gray-400",
       link: "/dashboard/thesis",
     },
   ];
@@ -221,10 +342,7 @@ export default function DashboardStats() {
   return (
     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
       {stats.map((stat, i) => (
-        <Card
-          key={i}
-          className="overflow-hidden transition-shadow hover:shadow-md"
-        >
+        <Card key={i} className="overflow-hidden transition-shadow">
           <div className={`h-1 w-full ${stat.color}`}></div>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>

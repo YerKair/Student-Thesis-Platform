@@ -1,15 +1,7 @@
 "use client";
 
 import { API_BASE_URL } from "@/shared/constants/config";
-
-interface Project {
-  id: number;
-  name: string;
-  description: string | null;
-  teamId: number;
-  createdAt: string;
-  updatedAt: string;
-}
+import { Project } from "@/entities/project/model/types";
 
 interface CreateProjectDto {
   name: string;
@@ -82,10 +74,10 @@ export class TeamProjectsService {
     return {
       id: response.id,
       name: response.name,
-      description: response.description,
-      teamId: response.team_id,
-      createdAt: response.created_at,
-      updatedAt: response.updated_at,
+      description: response.description || undefined,
+      team_id: response.team_id,
+      created_at: response.created_at,
+      updated_at: response.updated_at,
     };
   }
 }

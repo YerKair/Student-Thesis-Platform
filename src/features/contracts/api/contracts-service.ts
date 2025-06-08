@@ -333,4 +333,26 @@ export class ContractsService {
       throw error;
     }
   }
+
+  // Метод для подписания контракта (изменение статуса на "signed")
+  static async signContract(id: number, token: string): Promise<Contract> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/contracts/${id}/sign`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Failed to sign contract");
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Error signing contract:", error);
+      throw error;
+    }
+  }
 }

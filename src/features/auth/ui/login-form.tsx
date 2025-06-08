@@ -78,7 +78,7 @@ export const LoginForm = () => {
       <SpaceButton type="submit" className="w-full" disabled={isLoading}>
         {isLoading ? (
           <>
-            <SpaceProgressLoader className="mr-2 h-4 w-4" />
+            <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
             Вход...
           </>
         ) : (

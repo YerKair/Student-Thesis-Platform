@@ -63,6 +63,7 @@ export default function ContractsPage() {
     createContract,
     downloadDocument,
     generateDocument,
+    signContract,
   } = useContracts();
 
   const handleGenerateContract = async () => {
@@ -123,10 +124,23 @@ export default function ContractsPage() {
     try {
       const downloadUrl = await generateDocument(contractId);
       if (downloadUrl) {
-        toast({
-          title: "Успех",
-          description: "Документ договора сгенерирован!",
-        });
+        // После успешной генерации документа автоматически подписываем контракт
+        const signed = await signContract(contractId);
+        if (signed) {
+          toast({
+            title: "Успех",
+            description: "Документ договора сгенерирован и подписан!",
+          });
+          // Обновляем список контрактов для отображения нового статуса
+          window.location.reload();
+        } else {
+          toast({
+            title: "Частичный успех",
+            description:
+              "Документ сгенерирован, но не удалось подписать договор",
+            variant: "destructive",
+          });
+        }
       }
     } catch (error) {
       toast({
@@ -180,6 +194,15 @@ export default function ContractsPage() {
             className="bg-green-100 text-green-800 border-green-200"
           >
             Одобрен
+          </Badge>
+        );
+      case "signed":
+        return (
+          <Badge
+            variant="default"
+            className="bg-blue-100 text-blue-800 border-blue-200"
+          >
+            Подписан
           </Badge>
         );
       case "rejected":

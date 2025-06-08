@@ -14,6 +14,7 @@ import {
 } from "@/shared/ui/form";
 import { Input } from "@/shared/ui/input";
 import { useToast } from "@/shared/ui/use-toast";
+import { useRouter } from "next/navigation";
 
 const formSchema = z.object({
   code: z.string().min(6, "Код команды должен содержать минимум 6 символов"),
@@ -23,6 +24,7 @@ export function JoinTeamForm() {
   const { joinTeam } = useTeams();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -34,12 +36,13 @@ export function JoinTeamForm() {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
     try {
-      await joinTeam({ code: values.code });
+      await joinTeam(values.code);
       toast({
         title: "Успешно",
         description: "Вы присоединились к команде",
       });
       form.reset();
+      router.push("/teams");
     } catch (error) {
       toast({
         title: "Ошибка",

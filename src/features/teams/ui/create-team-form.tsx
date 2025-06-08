@@ -38,14 +38,16 @@ export function CreateTeamForm() {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
     try {
-      const team = await createTeam(values);
-      toast({
-        title: "Успешно",
-        description: "Команда успешно создана",
-      });
-      form.reset();
-      // Перенаправляем на страницу созданной команды
-      router.push(`/teams/${team.id}`);
+      const team = await createTeam(values.name);
+      if (team) {
+        toast({
+          title: "Успешно",
+          description: "Команда успешно создана",
+        });
+        form.reset();
+        // Перенаправляем на страницу созданной команды
+        router.push(`/teams/${team.id}`);
+      }
     } catch (error) {
       console.error("Error creating team:", error);
       toast({

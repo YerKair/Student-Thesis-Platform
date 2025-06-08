@@ -4,7 +4,7 @@ import { TeamMember } from "@/entities/team/model/types";
 
 interface TeamMembersProps {
   members: TeamMember[];
-  creatorId: string;
+  creatorId: number;
 }
 
 export function TeamMembers({ members, creatorId }: TeamMembersProps) {
@@ -23,7 +23,7 @@ export function TeamMembers({ members, creatorId }: TeamMembersProps) {
               <div className="flex items-center space-x-4">
                 <Avatar>
                   <AvatarFallback>
-                    {member.name
+                    {member.fullname
                       .split(" ")
                       .map((n) => n[0])
                       .join("")
@@ -32,7 +32,7 @@ export function TeamMembers({ members, creatorId }: TeamMembersProps) {
                 </Avatar>
                 <div>
                   <p className="text-sm font-medium leading-none">
-                    {member.name}
+                    {member.fullname}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {member.email}

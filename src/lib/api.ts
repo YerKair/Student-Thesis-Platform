@@ -235,4 +235,53 @@ export const api = {
       });
     },
   },
+  profile: {
+    getProfile: async (token: string | null) => {
+      if (!token) throw new Error("No authentication token");
+
+      return fetchWithAuth("/users/profile", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+    },
+    updateProfile: async (
+      token: string | null,
+      data: {
+        fullname: string;
+        specialization?: string;
+        course?: string;
+        group?: string;
+      }
+    ) => {
+      if (!token) throw new Error("No authentication token");
+
+      return fetchWithAuth("/users/profile", {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+    },
+    changePassword: async (
+      token: string | null,
+      data: {
+        current_password: string;
+        new_password: string;
+      }
+    ) => {
+      if (!token) throw new Error("No authentication token");
+
+      return fetchWithAuth("/users/password", {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+    },
+  },
 };
