@@ -136,3 +136,67 @@ div[class*="auth-page"] button {
 }
 
 /* Остальные существующие стили */
+
+/* Стили для анимаций */
+
+/* Поддержка GPU ускорения только для анимационных компонентов */
+.quasar-explosion,
+.dashboard-loading,
+.smooth-transition {
+  will-change: transform, opacity, background;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+}
+
+/* Оптимизация только для элементов внутри квазара */
+.quasar-explosion > *,
+.quasar-explosion div {
+  will-change: opacity, background, transform, scale;
+}
+
+/* Улучшенная производительность анимаций - только для элементов с этим классом */
+.motion-safe {
+  transition: all 0.3s ease;
+}
+
+/* Отключение анимаций для пользователей с настройкой reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .quasar-explosion,
+  .dashboard-loading,
+  .smooth-transition,
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Дополнительные стили для улучшения производительности */
+.overflow-hidden {
+  overflow: hidden;
+}
+
+/* Стили для блюра в анимациях */
+.backdrop-blur-animation {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Градиенты для анимаций */
+.quasar-gradient {
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(59, 130, 246, 0.8) 50%,
+    rgba(79, 70, 229, 0.6) 100%
+  );
+}
+
+.loading-gradient {
+  background: linear-gradient(
+    135deg,
+    rgba(15, 23, 42, 1) 0%,
+    rgba(30, 64, 175, 1) 50%,
+    rgba(79, 70, 229, 1) 100%
+  );
+}

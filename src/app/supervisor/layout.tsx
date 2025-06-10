@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Bell, Home, Users } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import dynamic from "next/dynamic";
@@ -22,8 +23,14 @@ export default function SupervisorLayout({
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <Link href="/dashboard" className="flex items-center">
-              <div className="h-8 w-8 rounded-md bg-white border border-gray-100 flex items-center justify-center mr-2">
-                <span className="text-black font-bold text-sm">ДП</span>
+              <div className="h-8 w-8 rounded-md bg-white border border-gray-200 shadow-sm flex items-center justify-center mr-2 overflow-hidden">
+                <Image
+                  src="/Diplomate.png"
+                  alt="DiploMate"
+                  width={24}
+                  height={24}
+                  className="object-contain"
+                />
               </div>
               <span className="font-semibold text-lg text-black">
                 Супервайзер

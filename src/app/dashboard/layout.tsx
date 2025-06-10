@@ -1,10 +1,11 @@
 "use client";
 
 import { ProtectedRoute } from "@/features/auth/ui";
-import { Header } from "@/widgets/header";
-import { Sidebar } from "@/widgets/sidebar";
+import { Header } from "@/widgets/header/ui/header";
+import { Sidebar } from "@/widgets/sidebar/ui/sidebar";
 import { useState, useEffect } from "react";
 import { Menu } from "lucide-react";
+import { SmoothTransition } from "@/shared/ui/smooth-transition";
 
 export default function DashboardLayout({
   children,
@@ -12,47 +13,43 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [isSmallScreen, setIsSmallScreen] = useState(false);
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
+  const [isSmallScreen, setIsSmallScreen] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    // Проверяем размер экрана при монтировании
     const checkScreenSize = () => {
-      const smallScreen = window.innerWidth < 800;
+      const smallScreen = window.innerWidth < 768;
       setIsSmallScreen(smallScreen);
-
-      // Автоматически сворачиваем сайдбар на малых экранах
       if (smallScreen) {
         setSidebarCollapsed(true);
       }
     };
 
-    // Вызываем сразу
     checkScreenSize();
-
-    // Добавляем слушатель для отслеживания изменения размера окна
     window.addEventListener("resize", checkScreenSize);
 
-    // Очистка слушателя
+    // Добавляем небольшую задержку для плавной загрузки
+    const timer = setTimeout(() => {
+      setIsLoaded(true);
+    }, 100);
+
     return () => {
       window.removeEventListener("resize", checkScreenSize);
+      clearTimeout(timer);
     };
   }, []);
 
-  // Обработчик переключения сайдбара с проверкой размера экрана
   const handleToggleSidebar = (collapsed: boolean) => {
-    // На малых экранах не даем развернуть сайдбар
-    if (isSmallScreen && !collapsed) {
-      return;
-    }
     setSidebarCollapsed(collapsed);
   };
 
   // Вычисляем ширину сайдбара
-  const sidebarWidth = sidebarCollapsed ? 80 : 256; // 80px (5rem) или 256px (16rem)
+  const sidebarWidth = sidebarCollapsed ? 80 : 240;
 
   return (
     // <ProtectedRoute>
+    // <SmoothTransition isVisible={isLoaded} duration={0.6}>
     <div className="min-h-screen flex flex-col bg-white">
       {/* Фиксированный хедер */}
       <div className="fixed top-0 left-0 right-0 z-40">
@@ -65,7 +62,9 @@ export default function DashboardLayout({
       {/* Контент с отступом */}
       <div
         className="flex-1 pt-16 transition-all duration-300"
-        style={{ marginLeft: `${sidebarWidth}px` }}
+        style={{
+          marginLeft: `${sidebarWidth}px`,
+        }}
       >
         {/* Кнопка мобильного меню */}
         {isSmallScreen && (
@@ -88,11 +87,12 @@ export default function DashboardLayout({
           </div>
         )}
 
-        <main className="bg-white min-h-[calc(100vh-4rem)] p-4">
+        <main className="bg-white min-h-[calc(100vh-4rem)] p-4 w-full">
           {children}
         </main>
       </div>
     </div>
+    // </SmoothTransition>
     // </ProtectedRoute>
   );
 }

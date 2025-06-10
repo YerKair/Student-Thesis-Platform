@@ -2,6 +2,7 @@
 
 import { RegisterForm } from "@/features/auth/ui/register-form";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function RegisterPage() {
   return (
@@ -12,8 +13,14 @@ export default function RegisterPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center justify-center">
-            <div className="h-12 w-12 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center">
-              <span className="text-white font-bold text-lg">ДП</span>
+            <div className="h-12 w-12 rounded-full bg-white shadow-lg flex items-center justify-center overflow-hidden border-2 border-blue-200">
+              <Image
+                src="/Diplomate.png"
+                alt="DiploMate"
+                width={36}
+                height={36}
+                className="object-contain"
+              />
             </div>
             <span className="ml-2 text-3xl font-bold text-white">
               DiploMate

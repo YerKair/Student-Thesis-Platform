@@ -9,6 +9,7 @@ export type ContractStatus =
   | "draft"
   | "pending"
   | "approved"
+  | "signed"
   | "rejected"
   | "completed";
 

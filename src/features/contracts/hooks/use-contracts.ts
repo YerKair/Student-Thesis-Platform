@@ -26,11 +26,26 @@ interface UseContractsReturn {
   signContract: (id: number) => Promise<boolean>;
   refreshContracts: () => Promise<void>;
   refreshTemplates: () => Promise<void>;
+  // Supervisor methods
+  getAllContracts: (filters?: {
+    student_name?: string;
+    teacher_name?: string;
+    user_email?: string;
+    status_filter?: string;
+  }) => Promise<Contract[]>;
+  allContracts: Contract[];
+  refreshAllContracts: (filters?: {
+    student_name?: string;
+    teacher_name?: string;
+    user_email?: string;
+    status_filter?: string;
+  }) => Promise<void>;
 }
 
 export function useContracts(): UseContractsReturn {
   const { token, user } = useAuth();
   const [contracts, setContracts] = useState<Contract[]>([]);
+  const [allContracts, setAllContracts] = useState<Contract[]>([]);
   const [templates, setTemplates] = useState<ContractTemplate[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -239,13 +254,85 @@ export function useContracts(): UseContractsReturn {
     [token]
   );
 
-  // Load contracts and templates on mount
+  // Load contracts and templates on mount - removed to prevent conflicts with supervisor page
   useEffect(() => {
     if (token) {
       refreshTemplates();
-      refreshContracts();
+      // Load regular contracts only manually or for specific non-supervisor pages
+      // refreshContracts();
     }
-  }, [token, refreshContracts, refreshTemplates]);
+  }, [token, refreshTemplates]);
+
+  // Supervisor methods
+  const getAllContracts = useCallback(
+    async (filters?: {
+      student_name?: string;
+      teacher_name?: string;
+      user_email?: string;
+      status_filter?: string;
+    }) => {
+      if (!token) {
+        setError("Authentication required");
+        return [];
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const contractsData = await ContractsService.getAllContracts(
+          token,
+          filters
+        );
+        setAllContracts(contractsData);
+        return contractsData;
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to fetch all contracts";
+        setError(errorMessage);
+        console.error("Error fetching all contracts:", err);
+        return [];
+      } finally {
+        setLoading(false);
+      }
+    },
+    [token]
+  );
+
+  const refreshAllContracts = useCallback(
+    async (filters?: {
+      student_name?: string;
+      teacher_name?: string;
+      user_email?: string;
+      status_filter?: string;
+    }) => {
+      if (!token) {
+        setError("Authentication required");
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const contractsData = await ContractsService.getAllContracts(
+          token,
+          filters
+        );
+        setAllContracts(contractsData);
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : "Failed to refresh all contracts";
+        setError(errorMessage);
+        console.error("Error refreshing all contracts:", err);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [token]
+  );
 
   return {
     contracts,
@@ -260,5 +347,9 @@ export function useContracts(): UseContractsReturn {
     signContract,
     refreshContracts,
     refreshTemplates,
+    // Supervisor methods
+    getAllContracts,
+    allContracts,
+    refreshAllContracts,
   };
 }

@@ -83,6 +83,24 @@ export interface StageStatusUpdate {
   supervisor_comment?: string;
 }
 
+export interface StageDeadlineCreate {
+  project_id: number;
+  stage: string;
+  deadline: string;
+}
+
+export interface StageDeadlineResponse {
+  id: number;
+  project_id: number;
+  stage: string;
+  deadline: string;
+  set_by_id: number;
+  set_by_name?: string;
+  set_by_email?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export class ReviewService {
   private static baseUrl =
     process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -260,5 +278,49 @@ export class ReviewService {
         `Failed to initialize project stages: ${response.statusText}`
       );
     }
+  }
+
+  static async setStageDeadline(
+    token: string,
+    deadlineData: StageDeadlineCreate
+  ): Promise<StageDeadlineResponse> {
+    const response = await fetch(`${this.baseUrl}/reviews/deadlines`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(deadlineData),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to set stage deadline: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  static async getProjectDeadlines(
+    token: string,
+    projectId: number
+  ): Promise<Deadline[]> {
+    const response = await fetch(
+      `${this.baseUrl}/reviews/projects/${projectId}/deadlines`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch project deadlines: ${response.statusText}`
+      );
+    }
+
+    return response.json();
   }
 }

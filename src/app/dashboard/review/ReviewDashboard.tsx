@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogClose,
 } from "@/shared/ui/dialog";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
@@ -34,7 +35,12 @@ import {
   Download,
   Eye,
 } from "lucide-react";
-import { ReviewService, TeamWithProject, StageStatus } from "./reviewApi";
+import {
+  ReviewService,
+  TeamWithProject,
+  StageStatus,
+  StageDeadlineCreate,
+} from "./reviewApi";
 import { useAuthContext } from "@/app/providers/auth-provider";
 
 interface FileComment {
@@ -73,11 +79,14 @@ const ReviewDashboard: React.FC = () => {
   const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([]);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [commentDialogOpen, setCommentDialogOpen] = useState(false);
+  const [deadlineDialogOpen, setDeadlineDialogOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<ProjectFile | null>(null);
   const [comment, setComment] = useState("");
   const [fileStatus, setFileStatus] = useState<string>("approved");
   const [stageComment, setStageComment] = useState("");
   const [stageStatus, setStageStatus] = useState<string>("completed");
+  const [deadlineStage, setDeadlineStage] = useState<string>("initial");
+  const [deadlineDate, setDeadlineDate] = useState<string>("");
 
   const stages = [
     { value: "initial", label: "Начальный этап" },
@@ -311,6 +320,39 @@ const ReviewDashboard: React.FC = () => {
     }
   };
 
+  const handleSetDeadline = async () => {
+    if (!selectedTeam?.project || !deadlineDate || !deadlineStage) return;
+
+    try {
+      const deadlineData: StageDeadlineCreate = {
+        project_id: selectedTeam.project.id,
+        stage: deadlineStage,
+        deadline: deadlineDate,
+      };
+
+      await ReviewService.setStageDeadline(token!, deadlineData);
+
+      // Обновляем данные команды
+      const updatedTeams = await ReviewService.getTeamsWithProjects(token!);
+      setTeams(updatedTeams);
+
+      // Обновляем выбранную команду
+      const updatedSelectedTeam = updatedTeams.find(
+        (t) => t.id === selectedTeam.id
+      );
+      if (updatedSelectedTeam) {
+        setSelectedTeam(updatedSelectedTeam);
+      }
+
+      // Сбрасываем форму
+      setDeadlineDate("");
+      setDeadlineStage("initial");
+      setDeadlineDialogOpen(false);
+    } catch (error) {
+      console.error("Error setting deadline:", error);
+    }
+  };
+
   const getStageStatus = (stageStatuses: StageStatus[], stage: string) => {
     return stageStatuses.find((s) => s.stage === stage);
   };
@@ -342,6 +384,33 @@ const ReviewDashboard: React.FC = () => {
     }
   };
 
+  const getStageDeadline = (deadlines: any[], stage: string) => {
+    return deadlines?.find((d) => d.stage === stage);
+  };
+
+  const formatDeadlineDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("ru-RU", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  };
+
+  const isDeadlineClose = (dateString: string) => {
+    const deadline = new Date(dateString);
+    const now = new Date();
+    const diffTime = deadline.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= 3 && diffDays >= 0;
+  };
+
+  const isDeadlinePassed = (dateString: string) => {
+    const deadline = new Date(dateString);
+    const now = new Date();
+    return deadline < now;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -354,8 +423,8 @@ const ReviewDashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 max-w-7xl">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 lg:mb-8">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
@@ -372,14 +441,14 @@ const ReviewDashboard: React.FC = () => {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
           {/* Teams List */}
           <div className="xl:col-span-1 order-2 xl:order-1">
-            <Card className="border-2 border-gray-200 shadow-lg bg-white sticky top-4">
+            <Card className="border-2 border-gray-200 shadow-lg bg-white">
               <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b-2 border-gray-200 p-4 lg:p-6">
                 <CardTitle className="flex items-center gap-2 sm:gap-3 text-lg sm:text-xl text-gray-900">
                   <Users className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 flex-shrink-0" />
                   <span className="truncate">Команды с проектами</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-3 sm:p-4 space-y-3 sm:space-y-4 max-h-[70vh] overflow-y-auto">
+              <CardContent className="p-3 sm:p-4 space-y-3 sm:space-y-4 max-h-[80vh] overflow-y-auto">
                 {teams.map((team) => (
                   <div
                     key={team.id}
@@ -470,43 +539,77 @@ const ReviewDashboard: React.FC = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-4 sm:p-6">
-                    <Tabs
-                      value={selectedStage}
-                      onValueChange={handleStageChange}
-                    >
-                      {/* Mobile: Vertical tabs, Desktop: Horizontal tabs */}
-                      <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full bg-gray-100 p-1 rounded-lg border-2 border-gray-200 gap-1 sm:gap-0">
-                        {stages.map((stage) => {
+                    {/* Stage Progress Indicator */}
+                    <div className="mb-8">
+                      <div className="flex justify-between items-center relative">
+                        {/* Progress Line */}
+                        <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-gray-300 -translate-y-1/2"></div>
+
+                        {stages.map((stage, index) => {
                           const currentStageStatus = getStageStatus(
                             selectedTeam.project?.stage_statuses || [],
                             stage.value
                           );
+
+                          let statusColor = "bg-gray-300"; // default
+                          if (currentStageStatus) {
+                            switch (currentStageStatus.status) {
+                              case "completed":
+                                statusColor = "bg-emerald-500";
+                                break;
+                              case "failed":
+                                statusColor = "bg-red-500";
+                                break;
+                              case "in_progress":
+                                statusColor = "bg-blue-500";
+                                break;
+                              case "waiting":
+                                statusColor = "bg-amber-500";
+                                break;
+                            }
+                          }
+
                           return (
-                            <TabsTrigger
+                            <div
                               key={stage.value}
-                              value={stage.value}
-                              className="relative font-semibold text-xs sm:text-sm text-gray-700 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-md border-2 border-transparent data-[state=active]:border-gray-300 p-2 sm:p-3 min-h-[3rem] sm:min-h-[2.5rem] flex flex-col sm:flex-row items-center justify-center text-center"
+                              className="flex flex-col items-center relative z-10"
                             >
-                              <span className="break-words leading-tight">
-                                {stage.label}
-                              </span>
-                              {currentStageStatus && (
-                                <div
-                                  className={`absolute -top-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 rounded-full border-2 border-white ${
-                                    currentStageStatus.status === "completed"
-                                      ? "bg-emerald-500"
-                                      : currentStageStatus.status === "failed"
-                                      ? "bg-red-500"
-                                      : currentStageStatus.status ===
-                                        "in_progress"
-                                      ? "bg-blue-500"
-                                      : "bg-amber-500"
+                              <button
+                                onClick={() => handleStageChange(stage.value)}
+                                className={`w-4 h-4 rounded-full border-2 border-white shadow-md cursor-pointer transition-all duration-200 hover:scale-110 ${statusColor} ${
+                                  selectedStage === stage.value
+                                    ? "ring-2 ring-blue-400 ring-offset-2"
+                                    : ""
+                                }`}
+                              ></button>
+                              <div className="mt-2 text-center">
+                                <span
+                                  className={`text-xs sm:text-sm font-medium px-2 py-1 rounded-md transition-colors ${
+                                    selectedStage === stage.value
+                                      ? "bg-blue-100 text-blue-800"
+                                      : "text-gray-600 hover:text-gray-800"
                                   }`}
-                                />
-                              )}
-                            </TabsTrigger>
+                                >
+                                  {stage.label}
+                                </span>
+                              </div>
+                            </div>
                           );
                         })}
+                      </div>
+                    </div>
+
+                    <Tabs
+                      value={selectedStage}
+                      onValueChange={handleStageChange}
+                    >
+                      {/* Hide the original TabsList since we have our custom indicator above */}
+                      <TabsList className="hidden">
+                        {stages.map((stage) => (
+                          <TabsTrigger key={stage.value} value={stage.value}>
+                            {stage.label}
+                          </TabsTrigger>
+                        ))}
                       </TabsList>
 
                       {stages.map((stage) => {
@@ -523,132 +626,226 @@ const ReviewDashboard: React.FC = () => {
                           >
                             <div className="space-y-4 sm:space-y-6">
                               {/* Stage Status */}
-                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 p-4 sm:p-6 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border-2 border-gray-200">
-                                <div className="flex-1 min-w-0">
-                                  <h4 className="font-bold text-lg sm:text-xl text-gray-900 mb-2">
-                                    {stage.label}
-                                  </h4>
-                                  {currentStageStatus && (
-                                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                                      <Badge
-                                        className={`px-3 py-1 font-semibold border w-fit ${
-                                          statusColors[
-                                            currentStageStatus.status as keyof typeof statusColors
-                                          ]
-                                        }`}
-                                      >
-                                        {currentStageStatus.status ===
-                                          "waiting" && "Ожидание"}
-                                        {currentStageStatus.status ===
-                                          "in_progress" && "В процессе"}
-                                        {currentStageStatus.status ===
-                                          "completed" && "Завершен"}
-                                        {currentStageStatus.status ===
-                                          "failed" && "Провален"}
-                                      </Badge>
-                                      {currentStageStatus.updated_by_name && (
-                                        <span className="text-xs sm:text-sm text-gray-600 font-medium">
-                                          от{" "}
-                                          {currentStageStatus.updated_by_name}
-                                        </span>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                                <Dialog
-                                  open={reviewDialogOpen}
-                                  onOpenChange={setReviewDialogOpen}
-                                >
-                                  <DialogTrigger asChild>
-                                    <Button
-                                      size="lg"
-                                      className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 sm:px-6 py-2 sm:py-3 shadow-lg w-full sm:w-auto text-sm sm:text-base flex-shrink-0"
+                              <div className="flex flex-col gap-4 p-6 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-300">
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+                                  <div className="flex-1">
+                                    <h4 className="font-bold text-xl text-gray-900 mb-3">
+                                      {stage.label}
+                                    </h4>
+                                    {currentStageStatus && (
+                                      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                                        <Badge
+                                          className={`px-3 py-1 font-semibold border w-fit ${
+                                            statusColors[
+                                              currentStageStatus.status as keyof typeof statusColors
+                                            ]
+                                          }`}
+                                        >
+                                          {currentStageStatus.status ===
+                                            "waiting" && "Ожидание"}
+                                          {currentStageStatus.status ===
+                                            "in_progress" && "В процессе"}
+                                          {currentStageStatus.status ===
+                                            "completed" && "Завершен"}
+                                          {currentStageStatus.status ===
+                                            "failed" && "Провален"}
+                                        </Badge>
+                                        {currentStageStatus.updated_by_name && (
+                                          <span className="text-sm text-gray-600 font-medium">
+                                            от{" "}
+                                            {currentStageStatus.updated_by_name}
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0 w-full sm:w-auto">
+                                    <Dialog
+                                      open={deadlineDialogOpen}
+                                      onOpenChange={setDeadlineDialogOpen}
                                     >
-                                      <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-                                      Оценить этап
-                                    </Button>
-                                  </DialogTrigger>
-                                  <DialogContent className="bg-white border-2 border-gray-300 shadow-2xl w-[95vw] max-w-md mx-auto">
-                                    <DialogHeader className="border-b border-gray-200 pb-4">
-                                      <DialogTitle className="text-lg sm:text-xl font-bold text-gray-900 break-words">
-                                        Оценка этапа: {stage.label}
-                                      </DialogTitle>
-                                    </DialogHeader>
-                                    <div className="space-y-4 sm:space-y-6 pt-4">
-                                      <div>
-                                        <Label
-                                          htmlFor="stage-status"
-                                          className="text-sm font-semibold text-gray-700 mb-2 block"
-                                        >
-                                          Статус
-                                        </Label>
-                                        <Select
-                                          value={stageStatus}
-                                          onValueChange={setStageStatus}
-                                        >
-                                          <SelectTrigger className="border-2 border-gray-300 bg-white text-gray-900 font-medium">
-                                            <SelectValue placeholder="Выберите статус" />
-                                          </SelectTrigger>
-                                          <SelectContent className="bg-white border-2 border-gray-300 shadow-lg">
-                                            <SelectItem
-                                              value="completed"
-                                              className="font-medium text-emerald-700"
-                                            >
-                                              Завершен успешно
-                                            </SelectItem>
-                                            <SelectItem
-                                              value="failed"
-                                              className="font-medium text-red-700"
-                                            >
-                                              Провален
-                                            </SelectItem>
-                                            <SelectItem
-                                              value="in_progress"
-                                              className="font-medium text-blue-700"
-                                            >
-                                              В процессе
-                                            </SelectItem>
-                                          </SelectContent>
-                                        </Select>
-                                      </div>
-                                      <div>
-                                        <Label
-                                          htmlFor="stage-comment"
-                                          className="text-sm font-semibold text-gray-700 mb-2 block"
-                                        >
-                                          Комментарий
-                                        </Label>
-                                        <Textarea
-                                          id="stage-comment"
-                                          value={stageComment}
-                                          onChange={(e) =>
-                                            setStageComment(e.target.value)
-                                          }
-                                          placeholder="Оставьте комментарий к этапу..."
-                                          rows={4}
-                                          className="border-2 border-gray-300 bg-white text-gray-900 placeholder-gray-500 font-medium resize-none"
-                                        />
-                                      </div>
-                                      <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-gray-200">
+                                      <DialogTrigger asChild>
                                         <Button
                                           variant="outline"
-                                          onClick={() =>
-                                            setReviewDialogOpen(false)
-                                          }
-                                          className="border-2 border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold order-2 sm:order-1"
+                                          onClick={() => {
+                                            setDeadlineStage(stage.value);
+                                            setDeadlineDate("");
+                                          }}
+                                          className="border-orange-300 text-orange-700 hover:bg-orange-50 font-semibold w-full sm:w-auto"
                                         >
-                                          Отмена
+                                          <Clock className="h-4 w-4 mr-2" />
+                                          Установить дедлайн
                                         </Button>
-                                        <Button
-                                          onClick={handleStageStatusUpdate}
-                                          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-lg order-1 sm:order-2"
-                                        >
-                                          Сохранить оценку
+                                      </DialogTrigger>
+                                      <DialogContent className="bg-white border border-gray-300 shadow-xl w-[95vw] max-w-md mx-auto z-50">
+                                        <DialogHeader className="border-b border-gray-200 pb-4">
+                                          <DialogTitle className="text-xl font-bold text-gray-900">
+                                            Установить дедлайн для этапа
+                                          </DialogTitle>
+                                        </DialogHeader>
+                                        <div className="space-y-4 pt-4">
+                                          <div>
+                                            <Label
+                                              htmlFor="deadline-stage"
+                                              className="text-sm font-semibold text-gray-700 mb-2 block"
+                                            >
+                                              Этап
+                                            </Label>
+                                            <Select
+                                              value={deadlineStage}
+                                              onValueChange={setDeadlineStage}
+                                            >
+                                              <SelectTrigger className="border border-gray-300 bg-white text-gray-900 font-medium">
+                                                <SelectValue placeholder="Выберите этап" />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                {stages.map((stageOption) => (
+                                                  <SelectItem
+                                                    key={stageOption.value}
+                                                    value={stageOption.value}
+                                                    className="font-medium"
+                                                  >
+                                                    {stageOption.label}
+                                                  </SelectItem>
+                                                ))}
+                                              </SelectContent>
+                                            </Select>
+                                          </div>
+                                          <div>
+                                            <Label
+                                              htmlFor="deadline-date"
+                                              className="text-sm font-semibold text-gray-700 mb-2 block"
+                                            >
+                                              Дата дедлайна
+                                            </Label>
+                                            <Input
+                                              id="deadline-date"
+                                              type="date"
+                                              value={deadlineDate}
+                                              onChange={(e) =>
+                                                setDeadlineDate(e.target.value)
+                                              }
+                                              min={
+                                                new Date()
+                                                  .toISOString()
+                                                  .split("T")[0]
+                                              }
+                                              className="border border-gray-300 bg-white text-gray-900 font-medium"
+                                            />
+                                          </div>
+                                          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-gray-200">
+                                            <Button
+                                              variant="outline"
+                                              onClick={() => {
+                                                setDeadlineDialogOpen(false);
+                                                setDeadlineDate("");
+                                              }}
+                                              className="border border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold"
+                                            >
+                                              Отмена
+                                            </Button>
+                                            <Button
+                                              onClick={handleSetDeadline}
+                                              disabled={!deadlineDate}
+                                              className="bg-orange-600 hover:bg-orange-700 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                              Установить дедлайн
+                                            </Button>
+                                          </div>
+                                        </div>
+                                      </DialogContent>
+                                    </Dialog>
+                                    <Dialog
+                                      open={reviewDialogOpen}
+                                      onOpenChange={setReviewDialogOpen}
+                                    >
+                                      <DialogTrigger asChild>
+                                        <Button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold w-full sm:w-auto">
+                                          <MessageSquare className="h-4 w-4 mr-2" />
+                                          Оценить этап
                                         </Button>
-                                      </div>
-                                    </div>
-                                  </DialogContent>
-                                </Dialog>
+                                      </DialogTrigger>
+                                      <DialogContent className="bg-white border border-gray-300 shadow-xl w-[95vw] max-w-md mx-auto z-50">
+                                        <DialogHeader className="border-b border-gray-200 pb-4">
+                                          <DialogTitle className="text-xl font-bold text-gray-900">
+                                            Оценка этапа: {stage.label}
+                                          </DialogTitle>
+                                        </DialogHeader>
+                                        <div className="space-y-4 pt-4">
+                                          <div>
+                                            <Label
+                                              htmlFor="stage-status"
+                                              className="text-sm font-semibold text-gray-700 mb-2 block"
+                                            >
+                                              Статус
+                                            </Label>
+                                            <Select
+                                              value={stageStatus}
+                                              onValueChange={setStageStatus}
+                                            >
+                                              <SelectTrigger className="border border-gray-300 bg-white text-gray-900 font-medium">
+                                                <SelectValue placeholder="Выберите статус" />
+                                              </SelectTrigger>
+                                              <SelectContent className="bg-white border border-gray-300 shadow-lg">
+                                                <SelectItem
+                                                  value="completed"
+                                                  className="font-medium text-emerald-700"
+                                                >
+                                                  Завершен успешно
+                                                </SelectItem>
+                                                <SelectItem
+                                                  value="failed"
+                                                  className="font-medium text-red-700"
+                                                >
+                                                  Провален
+                                                </SelectItem>
+                                                <SelectItem
+                                                  value="in_progress"
+                                                  className="font-medium text-blue-700"
+                                                >
+                                                  В процессе
+                                                </SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                          </div>
+                                          <div>
+                                            <Label
+                                              htmlFor="stage-comment"
+                                              className="text-sm font-semibold text-gray-700 mb-2 block"
+                                            >
+                                              Комментарий
+                                            </Label>
+                                            <Textarea
+                                              value={stageComment}
+                                              onChange={(e) =>
+                                                setStageComment(e.target.value)
+                                              }
+                                              placeholder="Комментарий рецензента (необязательно)"
+                                              className="border border-gray-300 bg-white text-gray-900 resize-none"
+                                              rows={4}
+                                            />
+                                          </div>
+                                        </div>
+                                        <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                                          <DialogClose asChild>
+                                            <Button className="bg-gray-500 hover:bg-gray-600 text-white">
+                                              Отмена
+                                            </Button>
+                                          </DialogClose>
+                                          <Button
+                                            onClick={() =>
+                                              handleStageStatusUpdate()
+                                            }
+                                            disabled={!stageStatus}
+                                            className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white"
+                                          >
+                                            Сохранить оценку
+                                          </Button>
+                                        </div>
+                                      </DialogContent>
+                                    </Dialog>
+                                  </div>
+                                </div>
                               </div>
 
                               {/* Stage Comment */}
@@ -662,6 +859,93 @@ const ReviewDashboard: React.FC = () => {
                                   </p>
                                 </div>
                               )}
+
+                              {/* Stage Deadline */}
+                              {(() => {
+                                const stageDeadline = getStageDeadline(
+                                  selectedTeam.project?.deadlines || [],
+                                  stage.value
+                                );
+                                if (stageDeadline) {
+                                  const isPassed = isDeadlinePassed(
+                                    stageDeadline.deadline
+                                  );
+                                  const isClose = isDeadlineClose(
+                                    stageDeadline.deadline
+                                  );
+                                  return (
+                                    <div
+                                      className={`p-4 sm:p-6 rounded-xl border-2 ${
+                                        isPassed
+                                          ? "bg-red-50 border-red-200"
+                                          : isClose
+                                          ? "bg-amber-50 border-amber-200"
+                                          : "bg-orange-50 border-orange-200"
+                                      }`}
+                                    >
+                                      <div className="flex items-start gap-3">
+                                        <Clock
+                                          className={`h-5 w-5 flex-shrink-0 mt-0.5 ${
+                                            isPassed
+                                              ? "text-red-600"
+                                              : isClose
+                                              ? "text-amber-600"
+                                              : "text-orange-600"
+                                          }`}
+                                        />
+                                        <div className="flex-1">
+                                          <h5
+                                            className={`font-bold mb-2 text-sm sm:text-base ${
+                                              isPassed
+                                                ? "text-red-900"
+                                                : isClose
+                                                ? "text-amber-900"
+                                                : "text-orange-900"
+                                            }`}
+                                          >
+                                            Дедлайн этапа
+                                            {isPassed && " (просрочен)"}
+                                            {isClose &&
+                                              !isPassed &&
+                                              " (скоро истекает)"}
+                                          </h5>
+                                          <p
+                                            className={`leading-relaxed font-medium text-sm sm:text-base mb-2 ${
+                                              isPassed
+                                                ? "text-red-800"
+                                                : isClose
+                                                ? "text-amber-800"
+                                                : "text-orange-800"
+                                            }`}
+                                          >
+                                            Срок сдачи:{" "}
+                                            <span className="font-bold">
+                                              {formatDeadlineDate(
+                                                stageDeadline.deadline
+                                              )}
+                                            </span>
+                                          </p>
+                                          {stageDeadline.set_by_name && (
+                                            <p
+                                              className={`text-xs sm:text-sm ${
+                                                isPassed
+                                                  ? "text-red-700"
+                                                  : isClose
+                                                  ? "text-amber-700"
+                                                  : "text-orange-700"
+                                              }`}
+                                            >
+                                              Установлен:{" "}
+                                              {stageDeadline.set_by_name}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              })()}
 
                               {/* Files */}
                               <div>
@@ -743,7 +1027,7 @@ const ReviewDashboard: React.FC = () => {
                                                 </span>
                                               </Button>
                                             </DialogTrigger>
-                                            <DialogContent className="bg-white border-2 border-gray-300 shadow-2xl w-[95vw] max-w-md mx-auto">
+                                            <DialogContent className="bg-white border-2 border-gray-300 shadow-2xl w-[95vw] max-w-md mx-auto z-50">
                                               <DialogHeader className="border-b border-gray-200 pb-4">
                                                 <DialogTitle className="text-lg sm:text-xl font-bold text-gray-900">
                                                   Комментарий к файлу

@@ -71,6 +71,55 @@ export class ContractsService {
     }
   }
 
+  static async getAllContracts(
+    token: string,
+    params?: {
+      skip?: number;
+      limit?: number;
+      student_name?: string;
+      teacher_name?: string;
+      user_email?: string;
+      status_filter?: string;
+    }
+  ): Promise<Contract[]> {
+    try {
+      const searchParams = new URLSearchParams();
+
+      if (params?.skip !== undefined)
+        searchParams.append("skip", params.skip.toString());
+      if (params?.limit !== undefined)
+        searchParams.append("limit", params.limit.toString());
+      if (params?.student_name)
+        searchParams.append("student_name", params.student_name);
+      if (params?.teacher_name)
+        searchParams.append("teacher_name", params.teacher_name);
+      if (params?.user_email)
+        searchParams.append("user_email", params.user_email);
+      if (params?.status_filter)
+        searchParams.append("status_filter", params.status_filter);
+
+      const url = `${API_BASE_URL}/contracts/all${
+        searchParams.toString() ? `?${searchParams.toString()}` : ""
+      }`;
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch all contracts");
+      }
+
+      const data: Contract[] = await response.json();
+      return data;
+    } catch (error) {
+      console.error("Error fetching all contracts:", error);
+      throw error;
+    }
+  }
+
   static async getContract(id: number, token: string): Promise<Contract> {
     try {
       const response = await fetch(`${API_BASE_URL}/contracts/${id}`, {

@@ -1,14 +1,17 @@
 {
-  "/admin/page": "app/admin/page.js",
-  "/admin/users/page": "app/admin/users/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
   "/api/teams/my-team/route": "app/api/teams/my-team/route.js",
   "/auth/login/page": "app/auth/login/page.js",
+  "/auth/register/page": "app/auth/register/page.js",
   "/dashboard/contracts/page": "app/dashboard/contracts/page.js",
+  "/dashboard/contracts/supervisor/page": "app/dashboard/contracts/supervisor/page.js",
   "/dashboard/page": "app/dashboard/page.js",
   "/dashboard/profile/page": "app/dashboard/profile/page.js",
   "/dashboard/review/page": "app/dashboard/review/page.js",
+  "/dashboard/reviewer/notifications/page": "app/dashboard/reviewer/notifications/page.js",
   "/dashboard/settings/page": "app/dashboard/settings/page.js",
   "/dashboard/teams/page": "app/dashboard/teams/page.js",
   "/dashboard/thesis/page": "app/dashboard/thesis/page.js",
-  "/favicon.ico/route": "app/favicon.ico/route.js"
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/supervisor/page": "app/supervisor/page.js"
 }

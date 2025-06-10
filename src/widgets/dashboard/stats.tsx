@@ -153,18 +153,6 @@ export default function DashboardStats() {
         link: "/dashboard/profile",
       },
       {
-        title: "Команда",
-        description: "Доступно для студентов",
-        icon: <Users className="h-5 w-5" />,
-        value: (
-          <span className="px-2 py-1 rounded-full bg-gray-100 text-xs mt-2 inline-block">
-            Недоступно
-          </span>
-        ),
-        color: "bg-gray-400",
-        link: "/dashboard/teams",
-      },
-      {
         title: "Договоры",
         description: getContractsDescription(),
         icon: <FileText className="h-5 w-5" />,
@@ -172,22 +160,10 @@ export default function DashboardStats() {
         color: getContractsColor(),
         link: "/dashboard/contracts",
       },
-      {
-        title: "Проект",
-        description: "Доступно для студентов",
-        icon: <BookOpen className="h-5 w-5" />,
-        value: (
-          <span className="px-2 py-1 rounded-full bg-gray-100 text-xs mt-2 inline-block">
-            Недоступно
-          </span>
-        ),
-        color: "bg-gray-400",
-        link: "/dashboard/thesis",
-      },
     ];
 
     return (
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-2">
         {defaultStats.map((stat, i) => (
           <Card key={i} className="overflow-hidden transition-shadow">
             <div className={`h-1 w-full ${stat.color}`}></div>

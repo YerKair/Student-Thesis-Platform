@@ -48,7 +48,10 @@ export const useAuth = () => {
           error: null,
         });
 
-        router.push("/dashboard");
+        // Убираем автоматическое перенаправление - теперь это будет управляться анимациями
+        // setTimeout(() => {
+        //   router.push("/dashboard");
+        // }, 3800); // Квазар (2000ms) + Загрузка (1500ms) + небольшой буфер (300ms)
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Ошибка при входе";
@@ -102,6 +105,10 @@ export const useAuth = () => {
     router.push("/auth/login");
   }, [setAuthState, router]);
 
+  const redirectToDashboard = useCallback(() => {
+    router.push("/dashboard");
+  }, [router]);
+
   useEffect(() => {
     const initAuth = async () => {
       const token = localStorage.getItem(TOKEN_KEY);
@@ -140,5 +147,6 @@ export const useAuth = () => {
     login,
     register,
     logout,
+    redirectToDashboard,
   };
 };

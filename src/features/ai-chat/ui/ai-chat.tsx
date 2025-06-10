@@ -1,7 +1,10 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { SendHorizontal, User, Bot } from "lucide-react";
+import { SendHorizontal, User, Bot, ExternalLink } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useAuthContext } from "@/app/providers/auth-provider";
+import { useDashboardData } from "@/features/dashboard/hooks/use-dashboard-data";
 
 import {
   Dialog,
@@ -15,6 +18,11 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
+  actions?: Array<{
+    type: "redirect" | "external_link";
+    label: string;
+    url: string;
+  }>;
 }
 
 interface AIChatProps {
@@ -39,225 +47,17 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 // Глобальная переменная для хранения API ключа
-let currentApiKey =
-  process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
-  "AIzaSyCRHlbr1HxB2qsmV-t03BldxvVkxsuisEg";
-
-// Функция для отправки запроса к Gemini API
-async function fetchGeminiResponse(prompt: string) {
-  // Используем актуальный API ключ
-  const API_KEY = currentApiKey || "YOUR_API_KEY_HERE";
-  const API_URL = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
-
-  try {
-    console.log(
-      "Sending request to Gemini API with prompt:",
-      prompt.substring(0, 50) + "..."
-    );
-
-    const response = await fetch(API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: `Ты помощник по дипломной работе на платформе для студентов "Дипломная работа". 
-
-Информация о платформе:
-- Это веб-сайт для помощи студентам в написании и оформлении дипломных и курсовых работ IT направления название Дипломная платформа
-- На платформе студенты могут отслеживать прогресс написания работы, общаться с научными руководителями
-- Платформа предоставляет шаблоны оформления, примеры работ и автоматическую проверку на соответствие стандартам
-- Пользователи могут использовать инструменты для планирования задач и управления сроками
-- Ты никак не должен фигурировать в виде того что ты напишешь дипломку сам ты просто гид по сайту и помощник по теории
-- Так же одна из твоих задач это помочь студентам с выбором темы дипломной работы
-
-Отвечай на одном из языков  русском казахском или английском языке учитывая на каком языке тебя спросили коротко и по существу на вопросы студентов о процессе написания и оформления дипломной работы, а также о возможностях платформ Вопрос: ${prompt}`,
-              },
-            ],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 800,
-        },
-      }),
-    });
-
-    const data = await response.json();
-    console.log(
-      "API Response:",
-      JSON.stringify(data).substring(0, 200) + "..."
-    );
-
-    if (!response.ok) {
-      console.error("API Error:", data);
-      return `Ошибка API (${response.status}): ${
-        data.error?.message || "Неизвестная ошибка"
-      }`;
-    }
-
-    if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-      return data.candidates[0].content.parts[0].text;
-    } else if (data.promptFeedback && data.promptFeedback.blockReason) {
-      return `Извините, запрос был заблокирован системой безопасности (${data.promptFeedback.blockReason}). Пожалуйста, перефразируйте вопрос.`;
-    } else {
-      console.error("Unexpected API response structure:", data);
-      return "Извините, я не смог сгенерировать ответ. Получен некорректный ответ от API. Пожалуйста, попробуйте задать вопрос иначе.";
-    }
-  } catch (error) {
-    console.error("Error fetching from Gemini API:", error);
-    return "Произошла ошибка при обработке запроса. Пожалуйста, проверьте подключение к интернету и попробуйте позже.";
-  }
-}
-
-// Тестовые данные для предложений, если API не работает
-const FALLBACK_SUGGESTIONS = {
-  как: [
-    "как оформить титульный лист дипломной работы?",
-    "как выбрать тему для диплома?",
-    "как подготовиться к защите диплома?",
-  ],
-  сколько: [
-    "сколько страниц должно быть в дипломной работе?",
-    "сколько источников нужно указать в списке литературы?",
-    "сколько времени занимает написание диплома?",
-  ],
-  требования: [
-    "требования к оформлению дипломной работы",
-    "требования к презентации для защиты",
-    "требования к списку литературы",
-  ],
-  срок: [
-    "сроки сдачи дипломной работы",
-    "сроки предзащиты диплома",
-    "сроки согласования темы с руководителем",
-  ],
-  что: [
-    "что должно быть в введении диплома?",
-    "что писать в заключении?",
-    "что такое актуальность исследования?",
-  ],
-  где: [
-    "где найти источники для дипломной работы?",
-    "где скачать шаблон оформления?",
-    "где публиковать научную статью?",
-  ],
-};
-
-// Функция для получения предложений на основе ввода пользователя
-async function fetchSuggestions(input: string): Promise<string[]> {
-  if (!input.trim() || input.length < 3) return [];
-
-  // Проверяем наличие ключевых слов в тестовых данных
-  for (const [key, suggestions] of Object.entries(FALLBACK_SUGGESTIONS)) {
-    if (input.toLowerCase().startsWith(key)) {
-      return suggestions;
-    }
-  }
-
-  // Используем актуальный API ключ
-  const API_KEY = currentApiKey || "YOUR_API_KEY_HERE";
-  const API_URL = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
-
-  try {
-    const response = await fetch(API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: `Ты помощник на платформе для студентов "Дипломная работа", где студенты получают поддержку при написании академических работ. 
-
-Предложи 3 коротких варианта завершения запроса пользователя о дипломной работе на русском языке или о функциях платформы. Дай только законченные фразы, без номеров и пояснений. Запрос: "${input}". Верни результат в формате JSON массива строк.`,
-              },
-            ],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.2,
-          topK: 20,
-          topP: 0.9,
-          maxOutputTokens: 200,
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      console.error("Error fetching suggestions:", await response.text());
-      return getDefaultSuggestions(input);
-    }
-
-    const data = await response.json();
-
-    if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-      const text = data.candidates[0].content.parts[0].text;
-      // Пытаемся извлечь JSON из ответа
-      try {
-        // Ищем JSON-массив в тексте
-        const jsonMatch = text.match(/\[(.|[\r\n])*\]/);
-        if (jsonMatch) {
-          const parsedData = JSON.parse(jsonMatch[0]);
-          return Array.isArray(parsedData)
-            ? parsedData.slice(0, 3)
-            : getDefaultSuggestions(input);
-        } else {
-          // Если не нашли JSON, разбиваем на строки и берем до 3
-          return text
-            .split("\n")
-            .filter((line: string) => line.trim())
-            .slice(0, 3)
-            .map((line: string) => line.replace(/^["-]*|["-]*$/g, "").trim());
-        }
-      } catch (e) {
-        console.error("Error parsing suggestions", e);
-        return getDefaultSuggestions(input);
-      }
-    } else {
-      return getDefaultSuggestions(input);
-    }
-  } catch (error) {
-    console.error("Error fetching suggestions:", error);
-    return getDefaultSuggestions(input);
-  }
-}
-
-// Функция для получения стандартных предложений на основе ввода
-function getDefaultSuggestions(input: string): string[] {
-  // Пытаемся найти подходящие предложения в fallback данных
-  const words = input.toLowerCase().split(" ");
-  for (const word of words) {
-    if (word.length >= 3) {
-      for (const [key, suggestions] of Object.entries(FALLBACK_SUGGESTIONS)) {
-        if (key.startsWith(word) || word.startsWith(key)) {
-          return suggestions;
-        }
-      }
-    }
-  }
-
-  // Если ничего не нашли, возвращаем стандартные предложения
-  return [
-    `${input} требования оформления`,
-    `${input} пример структуры`,
-    `${input} советы для защиты`,
-  ];
-}
+let currentApiKey = "AIzaSyCRHlbr1HxB2qsmV-t03BldxvVkxsuisEg";
 
 export function AIChat({ open, onOpenChange }: AIChatProps) {
+  const router = useRouter();
+  const { user, token } = useAuthContext();
+  const dashboardData = useDashboardData();
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "Привет! Я помощник по дипломной работе. Чем могу помочь?",
+      content:
+        "Здравствуйте! Я AI-помощник платформы DiploMate. Готов помочь Вам с вопросами по управлению дипломными проектами, навигации по платформе и процессу выполнения дипломной работы. Что Вас интересует?",
       timestamp: new Date(),
     },
   ]);
@@ -302,6 +102,388 @@ export function AIChat({ open, onOpenChange }: AIChatProps) {
     getSuggestions();
   }, [debouncedInput, isLoading]);
 
+  // Функция для отправки запроса к Gemini API - перемещена внутрь компонента
+  const fetchGeminiResponse = async (message: string): Promise<string> => {
+    if (!message.trim()) return "";
+
+    const currentPage = window.location.pathname;
+
+    // Build user context using dashboard data
+    const userContext = {
+      id: user?.id,
+      name: user?.fullname || user?.name,
+      email: user?.email,
+      role: user?.role || (user?.roles ? user.roles[0] : "student"),
+      roles: user?.roles || [user?.role || "student"],
+      isInTeam: dashboardData.isInTeam,
+      hasProject: dashboardData.hasProject,
+      teamName: dashboardData.team?.name,
+      teamId: dashboardData.team?.id,
+      projectProgress: dashboardData.projectProgress
+        ? {
+            currentStage: dashboardData.projectProgress.currentStage,
+            completedStages: dashboardData.projectProgress.completedStages,
+            totalStages: dashboardData.projectProgress.totalStages,
+            progressPercentage:
+              dashboardData.projectProgress.progressPercentage,
+          }
+        : null,
+      currentPage,
+      isLoading: dashboardData.isLoading,
+    };
+
+    const systemPrompt = `Ты - DiploMate AI Помощник, профессиональный ИИ-ассистент для платформы управления дипломными проектами DiploMate.
+
+КОНТЕКСТ ПЛАТФОРМЫ:
+DiploMate - это платформа для студентов, научных руководителей и администраторов для управления процессом написания дипломных работ. Платформа включает:
+- Управление командами студентов
+- Создание и отслеживание дипломных проектов  
+- Система дедлайнов и этапов работы
+- Загрузка и рецензирование файлов
+- Коммуникация между участниками
+- Создание и управление договорами
+
+ИНФОРМАЦИЯ О ТЕКУЩЕМ ПОЛЬЗОВАТЕЛЕ:
+- Роль: ${userContext.role}
+- В команде: ${userContext.isInTeam ? "Да" : "Нет"}
+- Есть проект: ${userContext.hasProject ? "Да" : "Нет"}
+${userContext.teamName ? `- Команда: ${userContext.teamName}` : ""}
+${
+  userContext.projectProgress
+    ? `- Текущий этап: ${userContext.projectProgress.currentStage}
+- Прогресс: ${userContext.projectProgress.progressPercentage}%`
+    : ""
+}
+- Текущая страница: ${userContext.currentPage}
+
+РОЛИ И ИХ ВОЗМОЖНОСТИ:
+1. СТУДЕНТ (student):
+   - Создание и вступление в команды
+   - Создание дипломных проектов
+   - Загрузка файлов по этапам
+   - Просмотр дедлайнов и прогресса
+   - Создание и управление договорами (практика, дипломная работа, исследования)
+   - Основные разделы: /dashboard/teams, /dashboard/thesis, /dashboard/contracts
+
+2. НАУЧНЫЙ РУКОВОДИТЕЛЬ (supervisor):
+   - Просмотр закрепленных команд
+   - Рецензирование файлов студентов
+   - Установка дедлайнов
+   - Управление этапами проектов
+   - Просмотр и одобрение договоров студентов
+   - Основные разделы: /dashboard/review, /dashboard/contracts/supervisor
+
+3. АДМИНИСТРАТОР (admin):
+   - Управление всеми пользователями
+   - Управление командами и проектами  
+   - Системное администрирование
+   - Доступ ко всем разделам
+   - Управление всеми договорами
+
+4. РЕЦЕНЗЕНТ (reviewer):
+   - Рецензирование дипломных работ
+   - Оценка файлов и этапов
+
+ДОСТУПНЫЕ РАЗДЕЛЫ ПЛАТФОРМЫ:
+- /dashboard - Главная панель
+- /dashboard/teams - Управление командами
+- /dashboard/thesis - Управление дипломными проектами
+- /dashboard/review - Рецензирование (для руководителей)
+- /dashboard/admin - Административная панель (для админов)
+- /dashboard/contracts - Управление договорами (для студентов)
+- /dashboard/contracts/supervisor - Просмотр договоров (для преподавателей)
+- /entities/user - Управление пользователями
+- /entities/team - Информация о командах
+- /entities/project - Управление проектами
+
+ФУНКЦИОНАЛЬНОСТЬ ДОГОВОРОВ:
+В разделе /dashboard/contracts доступны следующие возможности:
+1. СОЗДАНИЕ ДОГОВОРОВ:
+   - Договор на практику
+   - Договор на дипломную работу
+   - Договор о сотрудничестве
+   - Договор на исследование
+   - Договор на консультацию
+
+2. УПРАВЛЕНИЕ ДОГОВОРАМИ:
+   - Просмотр всех созданных договоров
+   - Статусы: черновик, на рассмотрении, одобрен, подписан, отклонен, завершен
+   - Генерация документов договоров
+   - Скачивание готовых документов
+   - Электронная подпись договоров
+
+3. ДЛЯ ПРЕПОДАВАТЕЛЕЙ (/dashboard/contracts/supervisor):
+   - Просмотр всех договоров студентов
+   - Фильтрация по студентам, преподавателям, статусу
+   - Одобрение и подписание договоров
+   - Генерация и скачивание документов
+
+ИНСТРУКЦИИ ПО ОБЩЕНИЮ:
+1. Отвечай профессионально и формально на русском языке
+2. НЕ используй личные обращения по имени, используй "Вы" 
+3. Давай конкретные советы основанные на роли пользователя и контексте
+4. Будь кратким и по существу, избегай излишней персонализации
+5. Не предполагай личную информацию о пользователе
+6. НЕ используй никакие специальные форматы типа [ACTION:...] или [REDIRECT:...]
+7. Просто предлагай действия обычным текстом
+8. Если нужно предложить переход, используй только формат:
+   REDIRECT:/путь:Название кнопки
+
+ПРИМЕРЫ ХОРОШИХ ОТВЕТОВ:
+- "Рекомендую проверить дедлайны проекта на соответствующей странице."
+- "Для работы с командой перейдите в раздел управления командами."
+- "Для создания договора на дипломную работу воспользуйтесь разделом договоров."
+- "REDIRECT:/dashboard/contracts:Создать договор"
+- "REDIRECT:/dashboard/thesis:Открыть проект"
+
+Помогай пользователям эффективно использовать DiploMate для управления их дипломными проектами и договорами!`;
+
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${
+          process.env.NEXT_PUBLIC_GEMINI_API_KEY || currentApiKey
+        }`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  {
+                    text: `${systemPrompt}\n\nСообщение пользователя: ${message}`,
+                  },
+                ],
+              },
+            ],
+            generationConfig: {
+              temperature: 0.7,
+              topK: 40,
+              topP: 0.95,
+              maxOutputTokens: 1024,
+            },
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Gemini API Error: ${response.status} - ${errorText}`);
+        throw new Error(
+          `HTTP error! status: ${response.status} - ${errorText}`
+        );
+      }
+
+      const data = await response.json();
+      const responseText =
+        data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+      if (!responseText) {
+        throw new Error("Пустой ответ от API");
+      }
+
+      return responseText;
+    } catch (error) {
+      console.error("Error fetching Gemini response:", error);
+      throw error;
+    }
+  };
+
+  // Обновленные предложения с учетом функций DiploMate
+  const FALLBACK_SUGGESTIONS = {
+    как: [
+      "как создать команду в DiploMate?",
+      "как создать договор на дипломную работу?",
+      "как загрузить файлы для этапа?",
+    ],
+    где: [
+      "где создать договор на практику?",
+      "где найти мою команду?",
+      "где загрузить договор на дипломную работу?",
+    ],
+    что: [
+      "что такое договор о сотрудничестве?",
+      "что должно быть в техническом этапе?",
+      "что нужно для подписания договора?",
+    ],
+    проект: [
+      "как создать проект в DiploMate?",
+      "как отслеживать этапы проекта?",
+      "как оформить договор для проекта?",
+    ],
+    команда: [
+      "как пригласить участников в команду?",
+      "как управлять командой в DiploMate?",
+      "как найти команду по коду приглашения?",
+    ],
+    этап: [
+      "какие этапы есть в дипломной работе?",
+      "как перейти к следующему этапу?",
+      "что делать если этап провален?",
+    ],
+    руководитель: [
+      "как связаться с научным руководителем?",
+      "как получить одобрение договора от руководителя?",
+      "как оформить договор с руководителем?",
+    ],
+    диплом: [
+      "требования к оформлению диплома",
+      "структура дипломной работы IT направления",
+      "как подготовиться к защите диплома",
+    ],
+    договор: [
+      "как создать договор на дипломную работу?",
+      "какие типы договоров доступны?",
+      "как подписать договор электронно?",
+    ],
+    генерация: [
+      "как сгенерировать документ договора?",
+      "где скачать готовый договор?",
+      "как получить PDF версию договора?",
+    ],
+    практика: [
+      "как оформить договор на практику?",
+      "требования к договору на практику",
+      "статусы договора на практику",
+    ],
+  };
+
+  // Функция для получения предложений на основе ввода пользователя
+  async function fetchSuggestions(input: string): Promise<string[]> {
+    if (!input.trim() || input.length < 3) return [];
+
+    // Проверяем наличие ключевых слов в тестовых данных
+    for (const [key, suggestions] of Object.entries(FALLBACK_SUGGESTIONS)) {
+      if (input.toLowerCase().includes(key)) {
+        return suggestions;
+      }
+    }
+
+    // Используем актуальный API ключ для генерации предложений
+    const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || currentApiKey;
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${API_KEY}`;
+
+    try {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: `Ты помощник на платформе DiploMate для студентов дипломных работ IT направления. 
+
+Предложи 3 коротких варианта завершения запроса пользователя о функциях платформы DiploMate или дипломной работе. 
+Фокусируйся на практических вопросах: команды, проекты, этапы работы, загрузка файлов, взаимодействие с руководителем.
+
+Запрос: "${input}"
+
+Верни только 3 законченные фразы без номеров, каждую с новой строки.`,
+                },
+              ],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.3,
+            topK: 20,
+            topP: 0.9,
+            maxOutputTokens: 150,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        console.error("Error fetching suggestions:", await response.text());
+        return getDefaultSuggestions(input);
+      }
+
+      const data = await response.json();
+
+      if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+        const text = data.candidates[0].content.parts[0].text;
+        return text
+          .split("\n")
+          .filter((line: string) => line.trim())
+          .slice(0, 3)
+          .map((line: string) => line.replace(/^["-]*|["-]*$/g, "").trim());
+      } else {
+        return getDefaultSuggestions(input);
+      }
+    } catch (error) {
+      console.error("Error fetching suggestions:", error);
+      return getDefaultSuggestions(input);
+    }
+  }
+
+  // Функция для получения стандартных предложений на основе ввода
+  function getDefaultSuggestions(input: string): string[] {
+    // Пытаемся найти подходящие предложения в fallback данных
+    const words = input.toLowerCase().split(" ");
+    for (const word of words) {
+      if (word.length >= 3) {
+        for (const [key, suggestions] of Object.entries(FALLBACK_SUGGESTIONS)) {
+          if (key.includes(word) || word.includes(key)) {
+            return suggestions;
+          }
+        }
+      }
+    }
+
+    // Если ничего не нашли, возвращаем общие предложения для DiploMate
+    return [
+      "как работать с проектом в DiploMate",
+      "функции платформы DiploMate",
+      "помощь по дипломной работе",
+    ];
+  }
+
+  // Функция для парсинга ответа и извлечения действий
+  function parseResponseForActions(content: string): {
+    cleanContent: string;
+    actions: Array<{
+      type: "redirect" | "external_link";
+      label: string;
+      url: string;
+    }>;
+  } {
+    const actions: Array<{
+      type: "redirect" | "external_link";
+      label: string;
+      url: string;
+    }> = [];
+    let cleanContent = content;
+
+    // Ищем паттерн REDIRECT:/path:Label
+    const redirectMatches = content.match(/REDIRECT:([^:]+):([^\n\r]+)/g);
+    if (redirectMatches) {
+      redirectMatches.forEach((match) => {
+        const parts = match.replace("REDIRECT:", "").split(":");
+        if (parts.length >= 2) {
+          actions.push({
+            type: "redirect",
+            url: parts[0].trim(),
+            label: parts[1].trim(),
+          });
+        }
+        cleanContent = cleanContent.replace(match, "").trim();
+      });
+    }
+
+    return { cleanContent, actions };
+  }
+
+  interface ActionItem {
+    type: "navigation" | "suggestion";
+    text: string;
+    action?: string;
+    target?: string;
+  }
+
   const sendMessage = async (messageText: string = input) => {
     if (messageText.trim() === "") return;
 
@@ -326,19 +508,21 @@ export function AIChat({ open, onOpenChange }: AIChatProps) {
       // Добавляем прощальное сообщение от ассистента
       const goodbyeMessage: Message = {
         role: "assistant",
-        content: "Был рад помочь! Чат будет очищен.",
+        content:
+          "Спасибо за обращение! Желаю успехов в работе с DiploMate. Чат будет очищен.",
         timestamp: new Date(),
       };
 
       setMessages((prev) => [...prev, goodbyeMessage]);
       setInput("");
 
-      // Очищаем чат через небольшую задержку, чтобы пользователь увидел сообщение
+      // Очищаем чат через небольшую задержку
       setTimeout(() => {
         setMessages([
           {
             role: "assistant",
-            content: "Привет! Я помощник по дипломной работе. Чем могу помочь?",
+            content:
+              "Здравствуйте! Я AI-помощник платформы DiploMate. Готов помочь Вам с вопросами по управлению дипломными проектами, навигации по платформе и процессу выполнения дипломной работы. Что Вас интересует?",
             timestamp: new Date(),
           },
         ]);
@@ -368,24 +552,28 @@ export function AIChat({ open, onOpenChange }: AIChatProps) {
     setIsLoading(true);
 
     try {
-      // Запрос к Gemini API
+      // Запрос к Gemini API с контекстом
       const aiResponseText = await fetchGeminiResponse(userInputText);
+
+      // Парсим ответ на предмет действий
+      const { cleanContent, actions } = parseResponseForActions(aiResponseText);
 
       // Проверяем, содержит ли ответ сообщение об ошибке
       if (
-        aiResponseText.includes("Ошибка API") ||
-        aiResponseText.includes("Извините, я не смог сгенерировать ответ")
+        cleanContent.includes("Ошибка API") ||
+        cleanContent.includes("Извините, я не смог сгенерировать ответ")
       ) {
         setApiError(
           "API недоступен или вернул ошибку. Вы можете попробовать повторить запрос позже."
         );
       }
 
-      // Добавляем ответ от API
+      // Добавляем ответ от API с действиями
       const aiResponse: Message = {
         role: "assistant",
-        content: aiResponseText,
+        content: cleanContent,
         timestamp: new Date(),
+        actions: actions.length > 0 ? actions : undefined,
       };
       setMessages((prev) => [...prev, aiResponse]);
     } catch (error) {
@@ -441,12 +629,26 @@ export function AIChat({ open, onOpenChange }: AIChatProps) {
     }
   };
 
+  // Функция для выполнения действий
+  const handleAction = (action: {
+    type: string;
+    url: string;
+    label: string;
+  }) => {
+    if (action.type === "redirect") {
+      router.push(action.url);
+      onOpenChange(false); // Закрываем чат при переходе
+    } else if (action.type === "external_link") {
+      window.open(action.url, "_blank");
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px] h-[600px] flex flex-col p-0 gap-0 bg-white text-gray-900 border-gray-200">
         <DialogHeader className="p-4 border-b bg-white">
           <DialogTitle className="text-gray-900">
-            Помощник по дипломной работе
+            DiploMate AI Помощник
           </DialogTitle>
         </DialogHeader>
 
@@ -474,6 +676,23 @@ export function AIChat({ open, onOpenChange }: AIChatProps) {
                 )}
               >
                 <p>{message.content}</p>
+
+                {/* Кнопки действий */}
+                {message.actions && message.actions.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {message.actions.map((action, actionIndex) => (
+                      <button
+                        key={actionIndex}
+                        onClick={() => handleAction(action)}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary text-sm rounded-md hover:bg-primary/20 transition-colors w-full"
+                      >
+                        <ExternalLink size={14} />
+                        {action.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 <div className="text-xs opacity-70 mt-1">
                   {message.timestamp.toLocaleTimeString([], {
                     hour: "2-digit",
@@ -565,7 +784,7 @@ export function AIChat({ open, onOpenChange }: AIChatProps) {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Напишите ваш вопрос..."
+              placeholder="Спросите о DiploMate или дипломной работе..."
               className="flex-grow min-h-[50px] max-h-[150px] p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary bg-white text-gray-900"
               disabled={isLoading}
             />

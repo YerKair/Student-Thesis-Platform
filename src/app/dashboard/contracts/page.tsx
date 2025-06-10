@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { Input } from "@/shared/ui/input";
@@ -28,11 +28,14 @@ import {
   AlertCircle,
   Loader2,
   FileCheck,
+  PenTool,
+  RefreshCw,
 } from "lucide-react";
 import { useToast } from "@/shared/ui/use-toast";
 import { useContracts } from "@/features/contracts/hooks/use-contracts";
 import { type ContractType } from "@/entities/contract/model/types";
 import { SignatureManager } from "@/features/contracts/components/signature-manager";
+import { useAuthContext } from "@/app/providers/auth-provider";
 
 // Статические типы договоров для отображения
 const CONTRACT_TYPES = [
@@ -45,6 +48,7 @@ const CONTRACT_TYPES = [
 
 export default function ContractsPage() {
   const { toast } = useToast();
+  const { user, token } = useAuthContext();
   const [activeTab, setActiveTab] = useState("create");
   const [formData, setFormData] = useState({
     contract_type: "" as ContractType | "",
@@ -64,7 +68,31 @@ export default function ContractsPage() {
     downloadDocument,
     generateDocument,
     signContract,
+    refreshContracts,
   } = useContracts();
+
+  // Автоматически обновляем договоры при монтировании компонента
+  useEffect(() => {
+    if (token && user) {
+      refreshContracts();
+    }
+  }, [token, user, refreshContracts]);
+
+  const handleRefreshContracts = async () => {
+    try {
+      await refreshContracts();
+      toast({
+        title: "Успех",
+        description: "Договоры обновлены!",
+      });
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Ошибка при обновлении договоров",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleGenerateContract = async () => {
     if (
@@ -124,28 +152,35 @@ export default function ContractsPage() {
     try {
       const downloadUrl = await generateDocument(contractId);
       if (downloadUrl) {
-        // После успешной генерации документа автоматически подписываем контракт
-        const signed = await signContract(contractId);
-        if (signed) {
-          toast({
-            title: "Успех",
-            description: "Документ договора сгенерирован и подписан!",
-          });
-          // Обновляем список контрактов для отображения нового статуса
-          window.location.reload();
-        } else {
-          toast({
-            title: "Частичный успех",
-            description:
-              "Документ сгенерирован, но не удалось подписать договор",
-            variant: "destructive",
-          });
-        }
+        toast({
+          title: "Успех",
+          description: "Документ договора сгенерирован!",
+        });
       }
     } catch (error) {
       toast({
         title: "Ошибка",
         description: "Ошибка при генерации документа",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSignContract = async (contractId: number) => {
+    try {
+      const success = await signContract(contractId);
+      if (success) {
+        toast({
+          title: "Успех",
+          description: "Договор подписан!",
+        });
+        // Обновляем список договоров для отображения нового статуса
+        window.location.reload();
+      }
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Ошибка при подписании договора",
         variant: "destructive",
       });
     }
@@ -257,10 +292,35 @@ export default function ContractsPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <div className="container mx-auto py-8 px-4">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Договоры</h1>
-          <p className="text-lg text-gray-600">
-            Создавайте и управляйте договорами для вашей дипломной работы
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                Договоры
+              </h1>
+              <p className="text-lg text-gray-600">
+                Создавайте и управляйте договорами для вашей дипломной работы
+              </p>
+            </div>
+            {user && (
+              <div className="text-right">
+                <p className="text-sm text-gray-600 mb-2">
+                  Вы вошли как:{" "}
+                  <span className="font-semibold">{user.email}</span>
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    localStorage.removeItem("auth_token");
+                    window.location.href = "/auth/login";
+                  }}
+                  className="border-2 border-red-200 text-red-700 hover:bg-red-50"
+                >
+                  Сменить пользователя
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="space-y-6">
@@ -446,7 +506,30 @@ export default function ContractsPage() {
             <TabsContent value="view" className="space-y-6">
               <Card className="shadow-lg border-0 bg-white">
                 <CardHeader className="bg-gradient-to-r from-green-600 to-green-700 text-white rounded-t-lg">
-                  <CardTitle className="text-xl">Созданные договоры</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-xl">
+                      Созданные договоры
+                    </CardTitle>
+                    <div className="flex items-center gap-2">
+                      {user && (
+                        <span className="text-sm text-green-100">
+                          Пользователь: {user.email}
+                        </span>
+                      )}
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleRefreshContracts}
+                        disabled={loading}
+                        className="bg-white/20 hover:bg-white/30 text-white border-white/20"
+                      >
+                        <RefreshCw
+                          className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+                        />
+                        Обновить
+                      </Button>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent className="p-6">
                   {loading && (
@@ -555,6 +638,28 @@ export default function ContractsPage() {
                                     >
                                       <Download className="h-4 w-4" />
                                     </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() =>
+                                        handleSignContract(contract.id)
+                                      }
+                                      disabled={
+                                        loading ||
+                                        contract.status === "signed" ||
+                                        contract.status === "approved"
+                                      }
+                                      className="border-2 border-purple-200 text-purple-700 hover:bg-purple-50 hover:border-purple-300"
+                                      title={
+                                        contract.status === "signed"
+                                          ? "Договор уже подписан"
+                                          : contract.status === "approved"
+                                          ? "Договор уже одобрен"
+                                          : "Подписать договор"
+                                      }
+                                    >
+                                      <PenTool className="h-4 w-4" />
+                                    </Button>
                                   </div>
                                 </TableCell>
                               </TableRow>
@@ -569,12 +674,34 @@ export default function ContractsPage() {
                       <p className="text-center text-gray-600 text-lg font-medium mb-4">
                         У вас пока нет созданных договоров
                       </p>
-                      <Button
-                        onClick={() => setActiveTab("create")}
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2"
-                      >
-                        Создать первый договор
-                      </Button>
+                      {user && (
+                        <div className="text-center text-sm text-gray-500 mb-4 space-y-1">
+                          <p>Текущий пользователь: {user.email}</p>
+                          <p>ID пользователя: {user.id}</p>
+                          <p>Роль: {user.role}</p>
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => setActiveTab("create")}
+                          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2"
+                        >
+                          Создать первый договор
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={handleRefreshContracts}
+                          disabled={loading}
+                          className="border-2 border-blue-200 text-blue-700 hover:bg-blue-50"
+                        >
+                          <RefreshCw
+                            className={`h-4 w-4 mr-2 ${
+                              loading ? "animate-spin" : ""
+                            }`}
+                          />
+                          Обновить
+                        </Button>
+                      </div>
                     </div>
                   ) : null}
                 </CardContent>

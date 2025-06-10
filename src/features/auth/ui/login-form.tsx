@@ -8,16 +8,10 @@ import { useToast } from "@/shared/ui/use-toast";
 import { loginSchema, LoginFormValues } from "../model";
 import { SpaceInput } from "@/shared/ui/space-input";
 import { SpaceButton } from "@/shared/ui/space-button";
-import { SpaceProgressLoader } from "@/shared/ui/space-progress-loader";
 import { useAuthContext } from "@/app/providers/auth-provider";
-import { Button } from "@/shared/ui/button";
-import { Input } from "@/shared/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
-import { Label } from "@/shared/ui/label";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 export const LoginForm = () => {
-  const { login } = useAuthContext();
+  const { login, redirectToDashboard } = useAuthContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -36,13 +30,19 @@ export const LoginForm = () => {
       setError(null);
 
       await login(data);
+      setIsLoading(false);
 
       toast({
         title: "Успешно!",
         description: "Вход выполнен успешно",
       });
+
+      // Простой редирект после успешного логина
+      setTimeout(() => {
+        redirectToDashboard();
+      }, 500);
     } catch (err) {
-      console.error("Login form error:", err);
+      console.error("Ошибка авторизации:", err);
       const errorMessage =
         err instanceof Error ? err.message : "Ошибка при входе";
       setError(errorMessage);
@@ -51,7 +51,6 @@ export const LoginForm = () => {
         title: "Ошибка!",
         description: errorMessage,
       });
-    } finally {
       setIsLoading(false);
     }
   };
@@ -64,6 +63,7 @@ export const LoginForm = () => {
           placeholder="Введите email"
           {...form.register("email")}
           error={form.formState.errors.email?.message}
+          disabled={isLoading}
         />
       </div>
       <div>
@@ -73,16 +73,17 @@ export const LoginForm = () => {
           placeholder="Введите пароль"
           {...form.register("password")}
           error={form.formState.errors.password?.message}
+          disabled={isLoading}
         />
       </div>
       <SpaceButton type="submit" className="w-full" disabled={isLoading}>
         {isLoading ? (
           <>
             <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-            Вход...
+            Вход в систему...
           </>
         ) : (
-          "Войти"
+          "Войти в DiploMate"
         )}
       </SpaceButton>
       {error && <div className="text-red-500 text-sm mt-2">{error}</div>}

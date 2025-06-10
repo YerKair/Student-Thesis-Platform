@@ -7,6 +7,11 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Button } from "@/shared/ui/button";
 import { Shield } from "lucide-react";
+import {
+  PageTransition,
+  SlideIn,
+  StaggeredChildren,
+} from "@/shared/ui/smooth-transition";
 
 // Динамический импорт компонентов
 const DashboardStats = dynamic(() => import("@/widgets/dashboard/stats"), {
@@ -43,39 +48,45 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-            Добро пожаловать, {getDisplayName()}!
-          </h1>
-          <p className="text-sm md:text-base text-gray-600">
-            Здесь вы можете отслеживать прогресс вашей работы
-          </p>
+    <PageTransition className="w-full px-4 py-6 space-y-6">
+      <SlideIn direction="down" delay={0.1}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+              Добро пожаловать, {getDisplayName()}!
+            </h1>
+            <p className="text-sm md:text-base text-gray-600">
+              Здесь вы можете отслеживать прогресс вашей работы
+            </p>
+          </div>
+          {user?.role === "admin" && (
+            <Link href="/admin">
+              <Button className="flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                Панель администратора
+              </Button>
+            </Link>
+          )}
         </div>
-        {user?.role === "admin" && (
-          <Link href="/admin">
-            <Button className="flex items-center gap-2">
-              <Shield className="w-4 h-4" />
-              Панель администратора
-            </Button>
-          </Link>
-        )}
-      </div>
+      </SlideIn>
 
-      <Suspense
-        fallback={<div className="h-32 animate-pulse bg-gray-100 rounded-lg" />}
-      >
-        <DashboardStats />
-      </Suspense>
+      <SlideIn direction="up" delay={0.3}>
+        <Suspense
+          fallback={
+            <div className="h-32 animate-pulse bg-gray-100 rounded-lg" />
+          }
+        >
+          <DashboardStats />
+        </Suspense>
+      </SlideIn>
 
-      <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
+      <div className="grid gap-6 grid-cols-1 xl:grid-cols-3">
         <Suspense
           fallback={
             <div className="h-64 animate-pulse bg-gray-100 rounded-lg" />
           }
         >
-          <div className="lg:col-span-2">
+          <div className="xl:col-span-2">
             <DashboardEvents />
           </div>
         </Suspense>
@@ -88,6 +99,6 @@ export default function DashboardPage() {
           <DashboardRecommendations />
         </Suspense>
       </div>
-    </div>
+    </PageTransition>
   );
 }

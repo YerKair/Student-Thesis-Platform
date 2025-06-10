@@ -21,6 +21,7 @@ import {
   ChevronLeft,
   ChevronRight,
   HelpCircle,
+  Bell,
 } from "lucide-react";
 import { useAuthContext } from "@/app/providers/auth-provider";
 import { AIChat } from "@/features/ai-chat";
@@ -84,6 +85,7 @@ export function Sidebar({
       title: "Команды",
       href: "/dashboard/teams",
       icon: <Users className="h-5 w-5" />,
+      roles: ["student", "admin"],
     },
     {
       title: "Супервайзер",
@@ -95,11 +97,19 @@ export function Sidebar({
       title: "Договоры",
       href: "/dashboard/contracts",
       icon: <FileText className="h-5 w-5" />,
+      roles: ["student"],
+    },
+    {
+      title: "Договоры",
+      href: "/dashboard/contracts/supervisor",
+      icon: <FileText className="h-5 w-5" />,
+      roles: ["supervisor", "admin"],
     },
     {
       title: "Дипломная работа",
       href: "/dashboard/thesis",
       icon: <BookOpen className="h-5 w-5" />,
+      roles: ["student", "admin"],
     },
     {
       title: "Настройки",
@@ -111,6 +121,12 @@ export function Sidebar({
       href: "/dashboard/review",
       icon: <BookOpen className="h-5 w-5" />,
       roles: ["supervisor", "admin"],
+    },
+    {
+      title: "Уведомления",
+      href: "/dashboard/reviewer/notifications",
+      icon: <Bell className="h-5 w-5" />,
+      roles: ["reviewer"],
     },
   ];
 
@@ -125,10 +141,10 @@ export function Sidebar({
 
   // В мобильном режиме сайдбар всегда развернут (не collapsed)
   const sidebarClasses = isMobile
-    ? "fixed top-0 left-0 h-full w-72 bg-white z-50 shadow-xl border-r border-gray-200"
+    ? "fixed top-0 left-0 h-full w-64 bg-white z-50 shadow-xl border-r border-gray-200"
     : cn(
         "fixed left-0 top-0 h-full bg-white border-r border-gray-200 transition-all duration-300 z-20",
-        collapsed ? "w-20" : "w-64"
+        collapsed ? "w-20" : "w-60"
       );
 
   return (
@@ -223,13 +239,13 @@ export function Sidebar({
                   Нужна помощь?
                 </h4>
                 <p className="text-xs mt-1 text-gray-600">
-                  Посетите наш справочный центр
+                  DiploMate AI Помощник готов помочь
                 </p>
                 <button
                   className="mt-3 text-sm text-primary"
                   onClick={() => setShowAIChat(true)}
                 >
-                  Открыть справку
+                  Открыть помощника
                 </button>
               </div>
             </div>

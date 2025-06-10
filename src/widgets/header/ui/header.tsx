@@ -4,9 +4,14 @@ import Link from "next/link";
 import { useAuthContext } from "@/app/providers/auth-provider";
 import { LogoutButton } from "@/features/auth/ui/logout-button";
 import { User, ChevronDown, Bell, MessageSquare } from "lucide-react";
+import Image from "next/image";
+import { Button } from "@/shared/ui/button";
 
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@/shared/lib/utils";
+import { ChatDropdown } from "@/features/chat/ui/chat-dropdown";
+import { NotificationBell } from "@/features/notifications/ui/notification-bell";
+import { useNotifications } from "@/features/notifications/hooks/use-notifications";
 
 interface HeaderProps {
   children?: React.ReactNode;
@@ -14,9 +19,14 @@ interface HeaderProps {
 
 export function Header({ children }: HeaderProps) {
   const { user, isAuthenticated } = useAuthContext();
-
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const chatRef = useRef<HTMLDivElement>(null);
+
+  // Хук для уведомлений (только для студентов)
+  const { notifications, unreadCount, markAsRead, markAllAsRead } =
+    useNotifications();
 
   // Закрываем меню при клике вне его
   useEffect(() => {
@@ -38,20 +48,26 @@ export function Header({ children }: HeaderProps) {
       case "admin":
         return {
           text: "Администратор",
-          bgColor: "bg-purple-500",
-          textColor: "text-black",
+          bgColor: "bg-red-100",
+          textColor: "text-red-800",
         };
-      case "teacher":
+      case "supervisor":
         return {
-          text: "Преподаватель",
-          bgColor: "bg-primary",
-          textColor: "text-black",
+          text: "Руководитель",
+          bgColor: "bg-blue-100",
+          textColor: "text-blue-800",
+        };
+      case "student":
+        return {
+          text: "Студент",
+          bgColor: "bg-green-100",
+          textColor: "text-green-800",
         };
       default:
         return {
-          text: "Студент",
-          bgColor: "bg-green-800",
-          textColor: "text-black",
+          text: "Пользователь",
+          bgColor: "bg-gray-100",
+          textColor: "text-gray-800",
         };
     }
   };
@@ -64,8 +80,14 @@ export function Header({ children }: HeaderProps) {
           {children}
 
           <Link href="/dashboard" className="flex items-center gap-2.5 ml-2">
-            <div className="h-9 w-9 rounded-full gradient-primary flex items-center justify-center shadow-sm">
-              <span className="text-white font-bold text-sm">ДП</span>
+            <div className="h-9 w-9 rounded-full bg-white shadow-md flex items-center justify-center border border-gray-200 overflow-hidden">
+              <Image
+                src="/Diplomate.png"
+                alt="DiploMate"
+                width={28}
+                height={28}
+                className="object-contain"
+              />
             </div>
             <span className="font-semibold text-xl hidden sm:inline-block text-black">
               DiploMate
@@ -75,16 +97,41 @@ export function Header({ children }: HeaderProps) {
 
         {isAuthenticated && user ? (
           <div className="flex items-center gap-3">
-            {/* Notifications button */}
-            <button className="relative h-9 w-9 rounded-full flex items-center justify-center bg-gray-50 hover:bg-gray-100 text-gray-700 transition-colors">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-0 right-0 h-2.5 w-2.5 rounded-full bg-success"></span>
-            </button>
+            {/* Notifications button - функциональные уведомления только для студентов */}
+            {user.roles?.includes("student") ? (
+              <NotificationBell
+                unreadCount={unreadCount}
+                notifications={notifications}
+                href="/student/notifications"
+                compact={true}
+                onMarkAsRead={markAsRead}
+                onMarkAllAsRead={markAllAsRead}
+              />
+            ) : (
+              /* Статичная кнопка уведомлений для других ролей с улучшенным дизайном */
+              <Button variant="ghost" size="sm" className="relative">
+                <Bell className="h-4 w-4" />
+                {/* Можно добавить статичный бейдж для демонстрации */}
+                {user.roles?.includes("supervisor") && (
+                  <span className="absolute -top-1 -right-1 h-2 w-2 bg-gray-400 rounded-full"></span>
+                )}
+              </Button>
+            )}
 
             {/* Messages button */}
-            <button className="h-9 w-9 rounded-full hidden sm:flex items-center justify-center bg-gray-50 hover:bg-gray-100 text-gray-700 transition-colors">
-              <MessageSquare className="h-5 w-5" />
-            </button>
+            <div className="relative" ref={chatRef}>
+              <button
+                className="h-9 w-9 rounded-full hidden sm:flex items-center justify-center bg-gray-50 hover:bg-gray-100 text-gray-700 transition-colors"
+                onClick={() => setChatOpen(!chatOpen)}
+              >
+                <MessageSquare className="h-5 w-5" />
+              </button>
+
+              <ChatDropdown
+                isOpen={chatOpen}
+                onClose={() => setChatOpen(false)}
+              />
+            </div>
 
             <div className="relative" ref={menuRef}>
               <button
